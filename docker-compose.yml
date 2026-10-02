@@ -1,0 +1,61 @@
+version: '3.8'
+
+# ==============================================================================
+# PortWatch — Full-Stack Container Orchestration (Web + PostgreSQL 16)
+# ==============================================================================
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: portwatch_web
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORTWATCH_ENV=production
+      - PORTWATCH_SECRET_KEY=change-in-production-docker-secret-key-32b
+      - DATABASE_URL=postgresql+pg8000://portwatch:portwatch_secure_pwd@db:5432/portwatch
+      - PORTWATCH_SCAN_INTERVAL=20
+      - PORTWATCH_DEMO_MODE=false
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - portwatch_net
+
+  db:
+    image: postgres:16-alpine
+    container_name: portwatch_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: portwatch
+      POSTGRES_PASSWORD: portwatch_secure_pwd
+      POSTGRES_DB: portwatch
+    ports:
+      - "5432:5432"
+    volumes:
+      - portwatch_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portwatch -d portwatch"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - portwatch_net
+
+volumes:
+  portwatch_pgdata:
+    name: portwatch_pgdata
+
+networks:
+  portwatch_net:
+    name: portwatch_net
+    driver: bridge

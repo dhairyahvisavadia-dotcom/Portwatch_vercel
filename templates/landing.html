@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PortWatch — See who's on your hotspot</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23000'/%3E%3Ctext x='16' y='22' font-family='monospace' font-weight='900' font-size='14' fill='%23FF7A18' text-anchor='middle'%3EPW%3C/text%3E%3C/svg%3E">
+<script>
+  (function(){
+    try {
+      var saved = localStorage.getItem('portwatch_theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', saved);
+    } catch(e){}
+  })();
+</script>
+<style>
+  :root{
+    --orange:#FF7A18; --orange-dark:#D85F00; --orange-deep:#9A4400;
+    --white:#FFFFFF; --black:#000000;
+    --line-soft: rgba(0,0,0,0.18);
+    --muted: rgba(0,0,0,0.45);
+    --mono: "JetBrains Mono","SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  [data-theme="dark"] {
+    --orange: #FF7A18;
+    --orange-dark: #FF9442;
+    --orange-deep: #B44E00;
+    --white: #171923;
+    --black: #f8fafc;
+    --line-soft: #2d3345;
+    --muted: #94a3b8;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.035) 0px, rgba(0,0,0,0.035) 1px, transparent 1px, transparent 3px),
+      var(--orange);
+    color:var(--black); font-family:var(--mono); min-height:100vh;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  [data-theme="dark"] body{
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px),
+      #0b0d13;
+    color:#f8fafc;
+  }
+  .wrap{ max-width:960px; margin:0 auto; padding:26px 20px 60px; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:40px; flex-wrap:wrap; gap:12px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .mark{ width:38px; height:38px; border-radius:9px; background:var(--black); border:2px solid var(--black); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--orange); font-size:13px; }
+  .brand h1{ font-size:16px; text-transform:uppercase; letter-spacing:.04em; }
+  [data-theme="dark"] .brand h1{ color: #f8fafc; }
+  .authbtns{ display:flex; gap:10px; align-items:center; }
+  .fbtn{ appearance:none; border:none; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; background:var(--orange); color:var(--black); font-family:var(--mono); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.06em; padding:10px 18px; border-radius:10px; border:2px solid var(--black); box-shadow:0 4px 0 var(--black); transition:transform .08s ease, box-shadow .08s ease, background-color .15s ease; }
+  .fbtn:hover{ background:#FF8C33; }
+  .fbtn:active{ transform:translateY(4px); box-shadow:0 0 0 var(--black); }
+  .fbtn.ghost{ background:var(--white); }
+  .fbtn.dark{ background:var(--black); color:var(--orange); }
+
+  [data-theme="dark"] .fbtn{
+    border-color: #33394a;
+    box-shadow: 0 4px 0 #090a0f;
+  }
+  [data-theme="dark"] .fbtn.ghost{
+    background: #1e2230;
+    color: #f8fafc;
+    border-color: #33394a;
+  }
+  [data-theme="dark"] .fbtn.ghost:hover{
+    background: #282d40;
+  }
+  [data-theme="dark"] .fbtn.dark{
+    background: var(--orange);
+    color: #000;
+  }
+
+  .hero{ background:var(--white); border:3px solid var(--black); border-radius:20px; box-shadow:0 10px 0 var(--orange-deep), 0 10px 24px rgba(0,0,0,0.3); padding:36px 32px; margin-bottom:28px; }
+  .hero h2{ font-size:24px; text-transform:uppercase; letter-spacing:.02em; margin-bottom:14px; line-height:1.3; }
+  .hero p{ font-size:13.5px; line-height:1.75; color:var(--black); max-width:640px; margin-bottom:10px; }
+  .hero .cta{ margin-top:22px; display:flex; gap:12px; flex-wrap:wrap; }
+
+  [data-theme="dark"] .hero{
+    background: #151722;
+    border-color: #2b3040;
+    box-shadow: 0 10px 0 #090a0f, 0 10px 24px rgba(0,0,0,0.5);
+    color: #f8fafc;
+  }
+  [data-theme="dark"] .hero h2{ color: #f8fafc; }
+  [data-theme="dark"] .hero p{ color: #cbd5e1; }
+
+  .featgrid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:28px; }
+  @media (max-width:640px){ .featgrid{ grid-template-columns:1fr; } }
+  .featcard{ background:var(--white); border:2px solid var(--black); border-radius:12px; padding:18px; text-decoration:none; color:var(--black); box-shadow:0 5px 0 var(--black); transition:transform .08s ease, box-shadow .08s ease, background-color .15s ease; display:flex; align-items:center; gap:14px; }
+  .featcard:hover{ background:rgba(255,122,24,0.08); }
+  .featcard:active{ transform:translateY(5px); box-shadow:0 0 0 var(--black); }
+  .fc-icon{ width:46px; height:46px; border-radius:10px; background:var(--orange); border:2px solid var(--black); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; letter-spacing:0.04em; color:#000; flex-shrink:0; }
+  .fc-title{ font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+  .fc-sub{ font-size:11px; color:var(--muted); line-height:1.5; }
+
+  [data-theme="dark"] .featcard{
+    background: #151722;
+    border-color: #2b3040;
+    color: #f8fafc;
+    box-shadow: 0 5px 0 #090a0f;
+  }
+  [data-theme="dark"] .featcard:hover{
+    background: #1c1f2e;
+    border-color: var(--orange);
+  }
+  [data-theme="dark"] .fc-icon{
+    background: #232738;
+    border-color: #3b4256;
+    color: var(--orange);
+  }
+  [data-theme="dark"] .fc-title{ color: #f8fafc; }
+  [data-theme="dark"] .fc-sub{ color: #94a3b8; }
+
+  .honest{ background:var(--black); color:var(--white); border-radius:16px; padding:24px 28px; }
+  .honest h3{ color:var(--orange); font-size:13px; text-transform:uppercase; letter-spacing:.06em; margin-bottom:12px; }
+  .honest ul{ padding-left:18px; font-size:12px; line-height:1.9; opacity:.9; }
+
+  [data-theme="dark"] .honest{
+    background: #151722;
+    border: 2px solid #2b3040;
+    color: #cbd5e1;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="mark">PW</div>
+      <h1>PortWatch</h1>
+    </div>
+    <div class="authbtns">
+      <button class="fbtn ghost" id="themeToggleBtn" onclick="toggleTheme()" style="font-size:10.5px; padding:8px 14px;" title="Switch light / dark theme">
+        <span id="themeToggleText">Dark Mode</span>
+      </button>
+      {% if session.get('logged_in') %}
+        <span style="font-size:11px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; align-self:center;">{{ session.username }}</span>
+        <a class="fbtn" href="{{ url_for('dashboard') }}">Dashboard &rarr;</a>
+        <a class="fbtn ghost" href="{{ url_for('logout') }}">Log out</a>
+      {% else %}
+        <a class="fbtn ghost" href="{{ url_for('login') }}">Log in</a>
+        <a class="fbtn dark" href="{{ url_for('signup') }}">Sign up</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="hero">
+    <h2>See exactly who's on your hotspot — and how, honestly</h2>
+    <p>PortWatch is a live dashboard for a WiFi hotspot you're already connected to. It shows every
+    connected device (phone, camera, speaker, laptop...), guesses its type with a stated confidence
+    level, flags devices that might be sharing your connection onward, and scans nearby WiFi networks
+    from your own laptop's radio — no third-party services, no passive packet capture, nothing
+    running behind your back.</p>
+    <p>Built for a university project and demoed with real, defensible methodology — every detection
+    technique documents exactly what it can and can't prove.</p>
+    <div class="cta">
+      {% if session.get('logged_in') %}
+        <a class="fbtn" href="{{ url_for('dashboard') }}">Open Live Dashboard &rarr;</a>
+        <a class="fbtn ghost" href="{{ url_for('map3d') }}">Open 3D Live Map</a>
+      {% else %}
+        <a class="fbtn" href="{{ url_for('signup') }}">Get started — it's free &rarr;</a>
+        <a class="fbtn ghost" href="{{ url_for('login') }}">I already have an account</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="featgrid">
+    <a class="featcard" href="{% if session.get('logged_in') %}{{ url_for('dashboard') }}{% else %}{{ url_for('login', next=url_for('dashboard')) }}{% endif %}">
+      <div class="fc-icon">LIVE</div>
+      <div><div class="fc-title">Live Dashboard</div><div class="fc-sub">Every device on your hotspot, live, with history that survives restarts</div></div>
+    </a>
+    <a class="featcard" href="{% if session.get('logged_in') %}{{ url_for('map3d') }}{% else %}{{ url_for('login', next=url_for('map3d')) }}{% endif %}">
+      <div class="fc-icon">3D</div>
+      <div><div class="fc-title">3D Live Map</div><div class="fc-sub">Rotatable 3D view of your network, with your real signal strength shown</div></div>
+    </a>
+    <a class="featcard" href="{% if session.get('logged_in') %}{{ url_for('connections') }}{% else %}{{ url_for('login', next=url_for('connections')) }}{% endif %}">
+      <div class="fc-icon">2D</div>
+      <div><div class="fc-title">Connection Map</div><div class="fc-sub">2D topology view: hotspot &rarr; laptop &rarr; every device</div></div>
+    </a>
+    <a class="featcard" href="{% if session.get('logged_in') %}{{ url_for('nearby') }}{% else %}{{ url_for('login', next=url_for('nearby')) }}{% endif %}">
+      <div class="fc-icon">RF</div>
+      <div><div class="fc-title">Nearby Networks</div><div class="fc-sub">Scan WiFi networks broadcasting around you, no API or account needed</div></div>
+    </a>
+  </div>
+
+  <div class="honest">
+    <h3>What this deliberately does not do</h3>
+    <ul>
+      <li>Does not connect to or access any network without your own credentials</li>
+      <li>Does not detect or identify devices that haven't joined a network you're connected to</li>
+      <li>Does not use monitor-mode capture, probe-request sniffing, or passive packet capture</li>
+      <li>Does not decrypt anyone's traffic or perform any attack against another device</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  function toggleTheme(){
+    var cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    setTheme(cur);
+  }
+  function setTheme(theme){
+    document.documentElement.setAttribute('data-theme', theme);
+    try { localStorage.setItem('portwatch_theme', theme); } catch(e){}
+    updateThemeUI(theme);
+  }
+  function updateThemeUI(theme){
+    var txt = document.getElementById('themeToggleText');
+    if(txt) txt.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    var cur = document.documentElement.getAttribute('data-theme') || 'light';
+    updateThemeUI(cur);
+  });
+</script>
+
+{% if not session.get('logged_in') %}
+<script>
+  // 2 minutes timer: if browsing the landing page without signing in,
+  // automatically opens the login page after 2 minutes so the user can authenticate
+  setTimeout(function() {
+    window.location.href = "{{ url_for('login', timeout='landing') }}";
+  }, 120000); // 2 minutes (120,000 ms)
+</script>
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}PortWatch — About &amp; Methodology{% endblock %}
+{% block navclass_about %}active{% endblock %}
+
+{% block content %}
+<div class="panel" style="margin-bottom:16px;">
+  <h2>What PortWatch does</h2>
+  <p style="font-size:12.5px; line-height:1.7;">
+    PortWatch is a passive network-visibility tool for a hotspot <b>you are connected to</b>.
+    It has two categories of feature, each with a different, honestly-stated confidence level.
+    Nothing here bypasses authentication, decrypts traffic, injects packets, or captures data
+    from devices you have not joined a network with.
+  </p>
+</div>
+
+<div class="panel" style="margin-bottom:16px;">
+  <h2>1. Device discovery (devices on YOUR connected network)</h2>
+  <table style="margin-bottom:0;">
+    <thead><tr><th>Technique</th><th>What it tells you</th><th>Confidence / limitation</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">ARP table read (<code>arp -a</code>), with 2 retries</td><td>Which IP/MAC pairs are active on your subnet</td><td>High for devices that reply to ARP at all; a device can still be missed in the ~1s scan window</td></tr>
+      <tr><td class="mono">Ping sweep, 3 samples/host</td><td>Whether a device is currently reachable, and TTL/latency</td><td>Some devices block ICMP but still appear via ARP; TTL taken as most-common across 3 samples to reduce single-packet noise</td></tr>
+      <tr><td class="mono">Reverse DNS / NetBIOS lookup</td><td>Device hostname, when the device exposes one</td><td>Many phones/IoT devices don't answer either — hostname is "—" in that case, not an error</td></tr>
+      <tr><td class="mono">Local OUI table + api.macvendors.com</td><td>Manufacturer, from the MAC address prefix</td><td>Local table is a small curated set (not the full IEEE registry); "high" confidence only for local-table exact matches; API results are "medium"</td></tr>
+      <tr><td class="mono">Vendor + hostname keyword matching</td><td>Best-guess device type (phone/laptop/camera/etc.)</td><td>Confidence is "high" only when vendor AND hostname agree; a single signal alone is "medium" or "low" — see the Type Reason shown per device</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="panel" style="margin-bottom:16px;">
+  <h2>2. Hotspot / tethering heuristic</h2>
+  <p style="font-size:12.5px; line-height:1.7; margin-bottom:10px;">
+    Each device's ping-reply TTL is compared to the standard starting TTL for common
+    operating systems (64: Linux/Android/iOS/macOS, 128: Windows, 255: some routers). A TTL
+    that lands below the nearest baseline suggests an extra routing hop — the same basic idea
+    mobile carriers use to detect tethering. <b>This is a heuristic, not a certainty</b>:
+  </p>
+  <ul style="font-size:12px; line-height:1.8; padding-left:20px;">
+    <li>A VPN on the device produces the same signature without any tethering happening</li>
+    <li>An unusual or congested network path can shift TTL similarly</li>
+    <li>Confidence is reported per-reading based on 3-sample agreement (high/medium/low) — a "low confidence" flag should be treated as a hint to investigate, not a finding</li>
+  </ul>
+</div>
+
+<div class="panel" style="margin-bottom:16px;">
+  <h2>3. Signal strength &amp; distance estimation</h2>
+  <p style="font-size:12.5px; line-height:1.7; margin-bottom:10px;">
+    This is where the two features in PortWatch differ sharply in what they can honestly claim:
+  </p>
+  <table style="margin-bottom:0;">
+    <thead><tr><th>Feature</th><th>Measurement</th><th>Distance claim</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>Your own laptop's link</b> to the hotspot (dashboard/3D map)</td>
+        <td>Real, measured signal % from <code class="mono">netsh wlan show interfaces</code> — your laptop genuinely receives this AP's radio signal directly</td>
+        <td>A distance <i>band</i> (e.g. "Nearby ~3-8m") via the standard log-distance path-loss model. Still an estimate — walls/reflections/antenna orientation shift real distance — but the underlying signal reading is real</td>
+      </tr>
+      <tr>
+        <td><b>Nearby Networks</b> (other access points)</td>
+        <td>Real, measured signal % per AP — your laptop directly receives each broadcasting AP's signal</td>
+        <td>Same distance-band estimate as above, legitimately, since the signal is directly measured by your own radio</td>
+      </tr>
+      <tr>
+        <td><b>Other devices on your hotspot</b> (phone, camera, etc.)</td>
+        <td>Ping round-trip latency (ms) via ICMP echo</td>
+        <td><b>Distance estimate via Wi-Fi RTT propagation model.</b> Maps packet round-trip turnaround and channel latency into an empirical distance band (e.g. ~1-2.5m for low latency, ~6-12m for moderate latency) and meters estimate, positioning connected nodes radially in the 3D map. Unconnected devices float in orbit without a connection beam.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="panel" style="margin-bottom:16px;">
+  <h2>4. What PortWatch deliberately does NOT do</h2>
+  <ul style="font-size:12.5px; line-height:1.8; padding-left:20px;">
+    <li>Does not connect to or attempt to access any network without your credentials</li>
+    <li>Does not capture, log, or attempt to identify devices that have not joined a network you're connected to</li>
+    <li>Does not use monitor-mode packet capture, probe-request sniffing, or any passive 802.11 frame capture</li>
+    <li>Does not decrypt, intercept, or read the content of anyone's network traffic</li>
+    <li>Does not perform deauthentication, packet injection, or any attack against another network or device</li>
+  </ul>
+</div>
+
+<div class="panel">
+  <h2>Known limitations to disclose</h2>
+  <p style="font-size:12.5px; line-height:1.7; font-style:italic; background:var(--tint); padding:12px; border-radius:8px; border:1px solid var(--line-soft);">
+    "PortWatch can only observe information available to a device that has joined the target
+    network as an ordinary client. It cannot detect devices that have not connected to the same
+    network, cannot measure other clients' radio signal strength, and its vendor/type/tethering
+    guesses are heuristics with stated confidence levels, not certainties. Results should be
+    interpreted accordingly."
+  </p>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+# Version control
+.git/
+.github/
+
+# Python compiled artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments & secrets
+.env
+.env.local
+.env.*.local
+venv/
+.venv/
+env/
+
+# SQLite databases & runtime caches
+portwatch.db
+portwatch_auth.db
+test_*.db
+*.db-journal
+*.db-wal
+*.db-shm
+vendor_cache.json
+
+# Test & coverage caches
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDE files
+.vscode/
+.idea/

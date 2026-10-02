@@ -1,0 +1,620 @@
+{% extends "base.html" %}
+{% block title %}PortWatch — 3D Map{% endblock %}
+{% block navclass_3d %}active{% endblock %}
+{% block bezel_action %}{% endblock %}
+
+{% block extra_style %}
+.scene-wrap{
+  position:relative;
+  height:540px;
+  border-radius:12px;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255,122,24,0.12), transparent 68%),
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 1px, transparent 1px, transparent 22px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 1px, transparent 1px, transparent 22px);
+  cursor:grab;
+  touch-action:none;
+  border:2px solid var(--black);
+  user-select:none;
+  -webkit-user-select:none;
+}
+.scene-wrap.grabbing{ cursor:grabbing; }
+.scene-wrap canvas{ width:100%; height:100%; display:block; }
+.scene-toolbar{ position:absolute; top:12px; right:12px; display:flex; gap:8px; z-index:3; flex-wrap:wrap; }
+.scene-toolbar .fbtn{ padding:6px 11px; font-size:9.5px; box-shadow:0 3px 0 var(--black); }
+.scene-toolbar .fbtn:active{ transform:translateY(3px); box-shadow:0 0 0 var(--black); }
+.scene-legend{ position:absolute; top:12px; left:14px; display:flex; gap:6px; z-index:3; flex-wrap:wrap; pointer-events:none; }
+.legend-tag{ font-size:9px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; background:rgba(255,255,255,0.92); border:1.5px solid var(--black); padding:4px 9px; border-radius:6px; display:flex; align-items:center; gap:6px; box-shadow:0 2px 0 var(--black); }
+.legend-indicator{ width:9px; height:9px; border-radius:50%; }
+.legend-indicator.conn{ background:var(--orange); border:1.5px solid var(--black); }
+.legend-indicator.unconn{ background:#F0F0F0; border:1.5px dashed #666; }
+.scene-hint{ position:absolute; bottom:12px; left:14px; font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; z-index:2; background:rgba(255,255,255,0.88); padding:4px 8px; border-radius:6px; border:1px solid var(--line-soft); pointer-events:none; }
+
+/* Inspector card for clicked node */
+.node-inspector{
+  position:absolute;
+  bottom:14px;
+  right:14px;
+  width:290px;
+  background:rgba(255,255,255,0.97);
+  border:2px solid var(--black);
+  border-radius:10px;
+  padding:12px 14px;
+  box-shadow:0 5px 0 var(--black);
+  z-index:4;
+  font-family:var(--mono);
+  backdrop-filter:blur(6px);
+}
+.node-inspector .ni-header{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1.5px dashed var(--line-soft); padding-bottom:7px; margin-bottom:8px; }
+.node-inspector .ni-title{ font-size:12px; font-weight:700; color:var(--black); }
+.node-inspector .ni-close{ background:none; border:none; font-size:15px; font-weight:700; cursor:pointer; color:var(--black); padding:0 3px; line-height:1; }
+.node-inspector .ni-row{ font-size:10.5px; line-height:1.6; color:var(--black); margin-bottom:2px; }
+.node-inspector .ni-row b{ color:var(--black); }
+.node-inspector .ni-badge{ display:inline-block; font-size:9px; font-weight:700; padding:2px 7px; border-radius:4px; margin-top:2px; border:1px solid var(--black); }
+.node-inspector .ni-badge.conn{ background:var(--orange); color:var(--black); }
+.node-inspector .ni-badge.unconn{ background:#EAEAEA; color:#555; border-style:dashed; }
+
+/* 3D Map Dark Mode Overrides */
+[data-theme="dark"] .scene-wrap{
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255,122,24,0.18), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 22px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 22px),
+    #11131c;
+  border-color: #2b3040;
+}
+[data-theme="dark"] .legend-tag{
+  background: #1e2230;
+  color: #f8fafc;
+  border-color: #3b4256;
+  box-shadow: 0 2px 0 #0f1016;
+}
+[data-theme="dark"] .legend-indicator.conn{
+  border-color: #f8fafc;
+}
+[data-theme="dark"] .legend-indicator.unconn{
+  background: #2b3042;
+  border-color: #94a3b8;
+}
+[data-theme="dark"] .scene-hint{
+  background: #1e2230;
+  color: #94a3b8;
+  border-color: #3b4256;
+}
+[data-theme="dark"] .node-inspector{
+  background: #171922;
+  border-color: #3b4256;
+  box-shadow: 0 5px 0 #000;
+  color: #e2e8f0;
+}
+[data-theme="dark"] .node-inspector .ni-header{
+  border-bottom-color: rgba(255,255,255,0.12);
+}
+[data-theme="dark"] .node-inspector .ni-title{ color: #f8fafc; }
+[data-theme="dark"] .node-inspector .ni-close{ color: #f8fafc; }
+[data-theme="dark"] .node-inspector .ni-row{ color: #cbd5e1; }
+[data-theme="dark"] .node-inspector .ni-row b{ color: #f8fafc; }
+[data-theme="dark"] .node-inspector .ni-badge.conn{
+  background: var(--orange);
+  color: #000;
+}
+[data-theme="dark"] .node-inspector .ni-badge.unconn{
+  background: #232635;
+  color: #94a3b8;
+  border-color: #3b4256;
+}
+{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <h2>3D Live Map <span class="hint">(drag to orbit &middot; radial distance scaled by latency ping RTT &middot; unconnected devices float in orbit)</span></h2>
+  <p style="font-size:10.5px; color:var(--muted); margin:-4px 0 12px; line-height:1.5;">
+    Connected devices have an animated dotted beam linked to the central LAPTOP, with radial distance calculated from network ping RTT.
+    <b>Unconnected devices</b> remain in the orbital ring <b>without a connection line</b>. Click any node to inspect its latency, distance, and hardware details.
+  </p>
+  <div class="scene-wrap" id="sceneWrap">
+    <div class="scene-legend">
+      <div class="legend-tag"><div class="legend-indicator conn"></div> Connected (<span id="countConn">0</span>) [with beam]</div>
+      <div class="legend-tag"><div class="legend-indicator unconn"></div> Unconnected (<span id="countUnconn">0</span>) [in orbit, no beam]</div>
+    </div>
+    <div class="scene-toolbar">
+      <button class="fbtn ghost" id="filterBtn" onclick="cycleFilter()">Show: All</button>
+      <button class="fbtn ghost" id="autoRotateBtn">Auto-rotate: On</button>
+    </div>
+
+    <!-- High-performance, glitch-free hardware-accelerated Canvas -->
+    <canvas id="scene3d"></canvas>
+    <div class="scene-hint">drag / swipe to orbit &middot; click node to inspect</div>
+
+    <div class="node-inspector" id="nodeInspector" style="display:none;">
+      <div class="ni-header">
+        <div>
+          <div class="ni-title" id="niName">—</div>
+          <span class="ni-badge" id="niBadge">Connected</span>
+        </div>
+        <button class="ni-close" onclick="closeInspector()">&times;</button>
+      </div>
+      <div class="ni-row"><b>Type:</b> <span id="niType">—</span></div>
+      <div class="ni-row"><b>IP Address:</b> <span id="niIp">—</span></div>
+      <div class="ni-row"><b>MAC / Vendor:</b> <span id="niMac">—</span></div>
+      <div class="ni-row"><b>Network Ping (RTT):</b> <span id="niRtt" style="font-weight:700;">—</span></div>
+      <div class="ni-row"><b>Est. Distance:</b> <span id="niDistance" style="font-weight:700; color:var(--orange-dark);">—</span></div>
+      <div class="ni-row" style="font-size:9.5px; color:var(--muted); margin-top:4px;" id="niModelNote">Distance calculated via Wi-Fi ping RTT propagation &amp; turnaround model</div>
+    </div>
+  </div>
+</div>
+<footer>PortWatch — 3D Map &middot; smooth 60fps orbit &middot; RTT distance model active</footer>
+{% endblock %}
+
+{% block extra_script %}
+// ---- 3D Scene Initialization ----
+const canvas = document.getElementById('scene3d');
+const ctx = canvas.getContext('2d');
+const wrap3d = document.getElementById('sceneWrap');
+
+let width = 760, height = 540;
+let CX = 380, CY = 270;
+const R = 185;
+const PERSPECTIVE = 680;
+
+let rotX = 0.35, rotY = 0.6;
+let autoRotate = true;
+let dragging = false;
+let lastPX = 0, lastPY = 0;
+let lastInteract = 0;
+
+let currentDevices = [];
+let currentOwnSignal = null;
+let selectedMac = null;
+let hoveredMac = null;
+let filterMode = 'all'; // 'all', 'connected', 'unconnected'
+
+// Cache stable 3D coordinates on unit sphere by device MAC so nodes never teleport
+const deviceAngleCache = new Map();
+
+function resizeCanvas(){
+  const rect = wrap3d.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  width = rect.width || 760;
+  height = rect.height || 540;
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  CX = width / 2;
+  CY = height / 2;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function cycleFilter(){
+  if(filterMode === 'all') filterMode = 'connected';
+  else if(filterMode === 'connected') filterMode = 'unconnected';
+  else filterMode = 'all';
+
+  const btn = document.getElementById('filterBtn');
+  if(filterMode === 'all') btn.textContent = 'Show: All';
+  else if(filterMode === 'connected') btn.textContent = 'Show: Connected Only';
+  else btn.textContent = 'Show: Unconnected Only';
+}
+
+function rotatePoint(x, y, z, rx, ry){
+  // rotate around Y axis
+  const cosY = Math.cos(ry), sinY = Math.sin(ry);
+  const x1 = x * cosY - z * sinY;
+  const z1 = x * sinY + z * cosY;
+  const y1 = y;
+  // rotate around X axis
+  const cosX = Math.cos(rx), sinX = Math.sin(rx);
+  const y2 = y1 * cosX - z1 * sinX;
+  const z2 = y1 * sinX + z1 * cosX;
+  const x2 = x1;
+  return [x2, y2, z2];
+}
+
+function project(x, y, z){
+  const scale = PERSPECTIVE / (PERSPECTIVE + z);
+  return { sx: CX + x * scale, sy: CY + y * scale, scale, z };
+}
+
+// Precompute static wireframe rings (latitude and longitude)
+const STATIC_WIRE_RINGS = [];
+// 3 latitude parallels
+[0, 0.52, -0.52].forEach(lat => {
+  const y = lat * R;
+  const rr = Math.sqrt(Math.max(R * R - y * y, 0));
+  const ring = [];
+  const segs = 64;
+  for(let i = 0; i <= segs; i++){
+    const a = (i / segs) * Math.PI * 2;
+    ring.push([Math.cos(a) * rr, y, Math.sin(a) * rr]);
+  }
+  STATIC_WIRE_RINGS.push(ring);
+});
+// 3 meridian circles
+for(let m = 0; m < 3; m++){
+  const lon = (m / 3) * Math.PI;
+  const ring = [];
+  const segs = 64;
+  for(let i = 0; i <= segs; i++){
+    const a = (i / segs) * Math.PI * 2;
+    const x0 = Math.sin(a) * R;
+    const y0 = Math.cos(a) * R;
+    ring.push([x0 * Math.cos(lon), y0, x0 * Math.sin(lon)]);
+  }
+  STATIC_WIRE_RINGS.push(ring);
+}
+
+// Deterministic spherical distribution by MAC address
+function assignDeviceAngles(devices){
+  const sorted = [...devices].sort((a,b) => a.mac.localeCompare(b.mac));
+  const n = Math.max(sorted.length, 8);
+  const golden = Math.PI * (3 - Math.sqrt(5));
+
+  sorted.forEach((d, i) => {
+    if(!deviceAngleCache.has(d.mac)){
+      const y = 1 - (i / (n - 1 || 1)) * 2;
+      const radiusAtY = Math.sqrt(Math.max(1 - y * y, 0));
+      const theta = golden * i;
+      const x = Math.cos(theta) * radiusAtY;
+      const z = Math.sin(theta) * radiusAtY;
+      deviceAngleCache.set(d.mac, [x, y, z]);
+    }
+  });
+}
+
+function selectDevice(mac){
+  selectedMac = mac;
+  const dev = currentDevices.find(d => d.mac === mac);
+  if(!dev) return;
+
+  const inspector = document.getElementById('nodeInspector');
+  document.getElementById('niName').textContent = dev.name || 'Unknown Device';
+  document.getElementById('niType').textContent = dev.type || 'unknown';
+  document.getElementById('niIp').textContent = dev.ip || '—';
+  document.getElementById('niMac').textContent = `${dev.mac} (${dev.vendor || 'Unknown'})`;
+
+  const badge = document.getElementById('niBadge');
+  if(dev.online){
+    badge.className = 'ni-badge conn';
+    badge.textContent = '🟢 Connected to Hotspot';
+  } else {
+    badge.className = 'ni-badge unconn';
+    badge.textContent = '⚪ In Orbit (Not Connected)';
+  }
+
+  const rttEl = document.getElementById('niRtt');
+  const distEl = document.getElementById('niDistance');
+  const modelNote = document.getElementById('niModelNote');
+
+  if(dev.rtt_ms !== null && dev.rtt_ms !== undefined){
+    rttEl.textContent = `${dev.rtt_ms} ms`;
+    distEl.textContent = `~${dev.rtt_distance_m !== null ? dev.rtt_distance_m + 'm' : '—'} (${dev.distance_band || 'Estimated'})`;
+    modelNote.textContent = dev.online 
+      ? 'Precise distance derived from network ping round-trip latency (RTT)' 
+      : 'Last recorded RTT latency & distance before disconnecting';
+  } else {
+    rttEl.textContent = '— (no active ping reply)';
+    distEl.textContent = dev.rtt_distance_m ? `~${dev.rtt_distance_m}m` : '—';
+    modelNote.textContent = 'Device is not answering ICMP ping or offline';
+  }
+
+  inspector.style.display = 'block';
+}
+
+function closeInspector(){
+  selectedMac = null;
+  document.getElementById('nodeInspector').style.display = 'none';
+}
+
+// Active rendered nodes for hit-testing
+let renderedNodes = [];
+
+function render3d(timestamp){
+  ctx.clearRect(0, 0, width, height);
+
+  const online = currentDevices.filter(d => d.online);
+  const offline = currentDevices.filter(d => !d.online);
+
+  document.getElementById('countConn').textContent = online.length;
+  document.getElementById('countUnconn').textContent = offline.length;
+
+  let renderList = [];
+  if(filterMode === 'all') renderList = [...online, ...offline];
+  else if(filterMode === 'connected') renderList = online;
+  else renderList = offline;
+
+  assignDeviceAngles(renderList);
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+  // 1. Draw static orbital wireframe rings (VIVID AND CLEAR IN BOTH LIGHT & DARK MODE)
+  ctx.strokeStyle = isDark ? "rgba(255, 122, 24, 0.45)" : "rgba(0, 0, 0, 0.12)";
+  ctx.lineWidth = isDark ? 1.6 : 1.0;
+  ctx.setLineDash([]);
+  STATIC_WIRE_RINGS.forEach(ring => {
+    ctx.beginPath();
+    ring.forEach(([x, y, z], idx) => {
+      const [rx, ry, rz] = rotatePoint(x, y, z, rotX, rotY);
+      const p = project(rx, ry, rz);
+      if(idx === 0) ctx.moveTo(p.sx, p.sy);
+      else ctx.lineTo(p.sx, p.sy);
+    });
+    ctx.stroke();
+  });
+
+  // 2. Hub (Laptop at origin)
+  const hub = project(0, 0, 0);
+
+  // 3. Compute 3D positions of all nodes
+  const nodeEntries = [];
+  renderList.forEach(d => {
+    const angle = deviceAngleCache.get(d.mac) || [1, 0, 0];
+    const [ux, uy, uz] = angle;
+
+    // Radial distance scaling:
+    // Connected devices scale according to their RTT latency distance!
+    // Unconnected devices stay cleanly in the outer orbit ring without a connection line.
+    let rScale = 1.0;
+    if(d.online){
+      if(d.rtt_distance_m !== null && d.rtt_distance_m !== undefined){
+        // Scale between 0.46 (very close ~1m) to 0.94 (~24m+)
+        rScale = 0.46 + Math.min(d.rtt_distance_m / 24, 1.0) * 0.48;
+      } else {
+        rScale = 0.80;
+      }
+    } else {
+      // Unconnected devices sit on the outer orbit ring
+      rScale = 1.08;
+    }
+
+    const x = ux * R * rScale;
+    const y = uy * R * rScale;
+    const z = uz * R * rScale;
+
+    const [rx, ry, rz] = rotatePoint(x, y, z, rotX, rotY);
+    const p = project(rx, ry, rz);
+    nodeEntries.push({ p, d, rz, isSelected: d.mac === selectedMac, isHovered: d.mac === hoveredMac });
+  });
+
+  // 4. BEAMS: ONLY connected devices get a dotted animated connection line to the laptop!
+  // Unconnected devices have NO line drawn to the laptop in the center.
+  const dashOffset = -(timestamp * 0.025) % 20;
+  nodeEntries.forEach(({ p, d }) => {
+    if(!d.online) return; // CRITICAL: NO CONNECTION LINE FOR UNCONNECTED DEVICES!
+
+    const opacity = Math.max(0.2, Math.min(0.85, (p.scale - 0.45) * 1.6));
+    ctx.save();
+    ctx.strokeStyle = '#FF7A18';
+    ctx.lineWidth = Math.max(1.2, 1.8 * p.scale);
+    ctx.globalAlpha = opacity;
+    ctx.setLineDash([4, 6]);
+    ctx.lineDashOffset = dashOffset;
+    ctx.beginPath();
+    ctx.moveTo(hub.sx, hub.sy);
+    ctx.lineTo(p.sx, p.sy);
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  // 5. Draw central LAPTOP hub
+  ctx.save();
+  const hubRadius = 28;
+  ctx.fillStyle = '#FF7A18';
+  ctx.strokeStyle = isDark ? '#FFFFFF' : '#000000';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(hub.sx, hub.sy, hubRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#000000';
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('LAPTOP', hub.sx, hub.sy);
+
+  if(currentOwnSignal && currentOwnSignal.signal_percent !== null && currentOwnSignal.signal_percent !== undefined){
+    ctx.font = 'bold 9px monospace';
+    ctx.fillStyle = isDark ? '#f8fafc' : '#333333';
+    ctx.fillText(`📶 ${currentOwnSignal.signal_percent}% (real)`, hub.sx, hub.sy + 40);
+  }
+  ctx.restore();
+
+  // 6. Draw device nodes sorted by depth (back to front)
+  nodeEntries.sort((a, b) => a.rz - b.rz);
+  renderedNodes = []; // update for hit-testing
+
+  nodeEntries.forEach(({ p, d, isSelected, isHovered }) => {
+    const isConn = d.online;
+    const baseRad = isConn ? 15 : 13;
+    let rad = (baseRad * p.scale + 5);
+    if(isSelected) rad *= 1.25;
+    else if(isHovered) rad *= 1.15;
+
+    const opacity = isConn 
+      ? Math.max(0.35, Math.min(1, p.scale)) 
+      : Math.max(0.25, Math.min(0.85, p.scale * 0.85));
+
+    ctx.save();
+    ctx.globalAlpha = opacity;
+
+    // Node body
+    ctx.beginPath();
+    ctx.arc(p.sx, p.sy, rad, 0, Math.PI * 2);
+
+    if(isSelected){
+      ctx.fillStyle = isDark ? '#3a2012' : '#FFF6EE';
+      ctx.strokeStyle = '#FF7A18';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([]);
+    } else if(isConn){
+      ctx.fillStyle = isDark ? '#232635' : '#FFFFFF';
+      ctx.strokeStyle = isDark ? '#FF7A18' : '#000000';
+      ctx.lineWidth = 2.2;
+      ctx.setLineDash([]);
+    } else {
+      ctx.fillStyle = isDark ? '#1a1c26' : '#F6F6F6';
+      ctx.strokeStyle = isDark ? '#4b5563' : '#777777';
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([3, 3]);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    // Node device type icon
+    ctx.setLineDash([]);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `bold ${Math.round(9 * p.scale + 3)}px monospace`;
+    ctx.fillStyle = isConn ? (isDark ? '#F8FAFC' : '#000000') : (isDark ? '#cbd5e1' : '#666666');
+    ctx.fillText(iconLabel(d.type), p.sx, p.sy);
+
+    // Device friendly name
+    const labelY = p.sy + rad + 12 * p.scale;
+    ctx.font = `bold ${Math.round(8 * p.scale + 2)}px monospace`;
+    ctx.fillStyle = isConn ? (isDark ? '#F8FAFC' : '#000000') : (isDark ? '#F8FAFC' : '#444444');
+    const shortName = (d.name || 'Unknown').split(' ')[0];
+    ctx.fillText(shortName, p.sx, labelY);
+
+    // Latency & distance or unconnected status badge
+    if(isConn){
+      if(d.rtt_ms !== null && d.rtt_ms !== undefined){
+        const distText = (d.rtt_distance_m !== null && d.rtt_distance_m !== undefined) ? `~${d.rtt_distance_m}m` : '';
+        ctx.font = `bold ${Math.round(6.8 * p.scale + 1.2)}px monospace`;
+        ctx.fillStyle = isDark ? '#FF9E4A' : '#D85F00';
+        ctx.fillText(`⚡ ${d.rtt_ms}ms (${distText})`, p.sx, labelY + 11 * p.scale);
+      }
+    } else {
+      ctx.font = `bold ${Math.round(6.2 * p.scale + 1.2)}px monospace`;
+      ctx.fillStyle = isDark ? '#94A3B8' : '#888888';
+      ctx.fillText('✕ not connected', p.sx, labelY + 10 * p.scale);
+    }
+
+    ctx.restore();
+
+    // Store projected node for pointer/click hit testing
+    renderedNodes.push({
+      mac: d.mac,
+      sx: p.sx,
+      sy: p.sy,
+      rad: rad + 6,
+      d
+    });
+  });
+}
+
+// ---- Interaction: Drag, Hover, Click ----
+function getCanvasPos(e){
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: clientX - rect.left,
+    y: clientY - rect.top
+  };
+}
+
+function findNodeAt(x, y){
+  // Check top-most nodes first
+  for(let i = renderedNodes.length - 1; i >= 0; i--){
+    const node = renderedNodes[i];
+    const dist = Math.hypot(x - node.sx, y - node.sy);
+    if(dist <= node.rad) return node;
+  }
+  return null;
+}
+
+function pointerDown(e){
+  const pos = getCanvasPos(e);
+  dragging = true;
+  lastPX = pos.x;
+  lastPY = pos.y;
+  lastInteract = performance.now();
+  wrap3d.classList.add('grabbing');
+}
+
+function pointerMove(e){
+  const pos = getCanvasPos(e);
+  if(dragging){
+    const dx = pos.x - lastPX, dy = pos.y - lastPY;
+    rotY += dx * 0.007;
+    rotX += dy * 0.007;
+    rotX = Math.max(-1.35, Math.min(1.35, rotX));
+    lastPX = pos.x;
+    lastPY = pos.y;
+    lastInteract = performance.now();
+  } else {
+    // Hover hit test
+    const node = findNodeAt(pos.x, pos.y);
+    const newHover = node ? node.mac : null;
+    if(newHover !== hoveredMac){
+      hoveredMac = newHover;
+      canvas.style.cursor = hoveredMac ? 'pointer' : 'default';
+    }
+  }
+}
+
+function pointerUp(e){
+  if(dragging){
+    dragging = false;
+    lastInteract = performance.now();
+    wrap3d.classList.remove('grabbing');
+  }
+}
+
+canvas.addEventListener('mousedown', pointerDown);
+window.addEventListener('mousemove', pointerMove);
+window.addEventListener('mouseup', pointerUp);
+
+canvas.addEventListener('touchstart', pointerDown, { passive: true });
+wrap3d.addEventListener('touchmove', pointerMove, { passive: true });
+window.addEventListener('touchend', pointerUp);
+
+// Click node selection
+canvas.addEventListener('click', (e) => {
+  const pos = getCanvasPos(e);
+  const node = findNodeAt(pos.x, pos.y);
+  if(node){
+    selectDevice(node.mac);
+  }
+});
+
+document.getElementById('autoRotateBtn').addEventListener('click', (e) => {
+  autoRotate = !autoRotate;
+  e.target.textContent = `\u21BB Auto-rotate: ${autoRotate ? 'On' : 'Off'}`;
+});
+
+// Continuous, buttery smooth 60fps render loop
+function animate(timestamp){
+  if(autoRotate && !dragging && (performance.now() - lastInteract > 400)){
+    rotY += 0.003;
+  }
+  render3d(timestamp);
+  requestAnimationFrame(animate);
+}
+
+// Lightweight 5s data refresh (strictly /api/devices and /api/status -- zero netsh lag!)
+async function refresh(){
+  try {
+    const devs = await fetchDevices();
+    currentDevices = devs;
+    const status = await fetchStatus();
+    currentOwnSignal = status.own_connection || null;
+    refreshHeader();
+
+    // Auto-select device from query parameter (e.g. ?mac=...)
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetMac = urlParams.get('mac');
+    if(targetMac && (!selectedMac || selectedMac === targetMac)){
+      selectDevice(targetMac);
+    }
+  } catch(e) {
+    console.error('Refresh error:', e);
+  }
+}
+
+refresh();
+setInterval(refresh, 5000);
+requestAnimationFrame(animate);
+{% endblock %}

@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "portwatch"
+version = "2.1.0"
+description = "Wireless hotspot monitoring, device fingerprinting, and real-time topology dashboard"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "PortWatch Team"}
+]
+keywords = ["network", "monitoring", "wifi", "hotspot", "security", "nmap", "arp", "packet-analysis"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Networking :: Monitoring",
+    "Topic :: Security",
+]
+dependencies = [
+    "flask>=3.0",
+    "requests>=2.31",
+    "python-dotenv>=1.0.0",
+    "flask-wtf>=1.2.0",
+    "flask-limiter>=3.5.0",
+    "sqlalchemy>=2.0.0",
+    "pg8000>=1.30.0",
+]
+
+[tool.black]
+line-length = 120
+target-version = ['py310', 'py311', 'py312', 'py313']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 120
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

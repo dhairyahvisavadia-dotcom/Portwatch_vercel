@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}PortWatch — Connection Map{% endblock %}
+{% block navclass_conn %}active{% endblock %}
+{% block bezel_action %}{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <h2>Link topology <span class="hint">(hotspot gateway &rarr; laptop hub &rarr; connected devices &middot; unconnected devices in orbit)</span></h2>
+  <p style="font-size:10.5px; color:var(--muted); margin:-4px 0 10px;">
+    Active devices fan out in a guaranteed collision-free structured layout with dedicated live radio and distance cards.
+    Beams originate strictly from the laptop perimeter with zero text overlap.
+  </p>
+  <div class="topo" style="overflow-x:auto;">
+    <svg id="topoSvg" viewBox="0 0 960 560" style="width:100%; height:auto; min-height:480px; max-height:640px; display:block;"></svg>
+  </div>
+</div>
+<footer>PortWatch — Connection Map &middot; refreshes every 5s</footer>
+{% endblock %}
+
+{% block extra_script %}
+let cachedDevices = [];
+
+function escapeSvg(str){
+  if(!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderTopology(list){
+  cachedDevices = list;
+  const svg = document.getElementById('topoSvg');
+  if(!svg) return;
+
+  const cx = 210, cy = 280;
+  const laptopR = 36;
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetMac = (urlParams.get('mac') || '').toUpperCase();
+
+  // Deduplicate online devices by MAC
+  const seenOnlineMacs = new Set();
+  const online = [];
+  (list || []).forEach(d => {
+    if(d.online && !seenOnlineMacs.has(d.mac)){
+      seenOnlineMacs.add(d.mac);
+      online.push(d);
+    }
+  });
+
+  const offline = (list || []).filter(d => !d.online && !seenOnlineMacs.has(d.mac));
+
+  let html = "";
+  const trunkStroke = isDark ? '#e2e8f0' : '#000000';
+  const labelColor = isDark ? '#f8fafc' : '#000000';
+
+  // 1. Hotspot Gateway (Left Side)
+  html += `<line x1="58" y1="${cy}" x2="${cx - laptopR}" y2="${cy}" stroke="${trunkStroke}" stroke-width="2.8"/>`;
+  html += `<rect x="24" y="${cy - 16}" width="32" height="32" rx="6" fill="#FF7A18" stroke="${trunkStroke}" stroke-width="2.2"/>`;
+  html += `<text x="24" y="${cy - 22}" class="cable-label" font-size="9" font-weight="700" fill="${labelColor}">HOTSPOT</text>`;
+
+  // 2. Connected devices in Structured Dedicated Vertical Lanes (Guaranteed 0% Collision)
+  const n = online.length;
+  const startY = n <= 1 ? cy : Math.max(65, cy - ((n - 1) * 34));
+  const endY = n <= 1 ? cy : Math.min(495, cy + ((n - 1) * 34));
+  const stepY = n <= 1 ? 0 : (endY - startY) / (n - 1);
+
+  online.forEach((d, i) => {
+    const ny = n <= 1 ? cy : (startY + i * stepY);
+    // Smooth convex arc offset
+    const norm = n <= 1 ? 0 : (i / (n - 1)) * 2 - 1; // -1 to +1
+    const arcXOffset = (1 - (norm * norm)) * 32; // bulge out slightly in center
+    const nx = 480 + arcXOffset;
+    const devR = 21;
+    const isTarget = Boolean(targetMac && d.mac.toUpperCase() === targetMac);
+
+    // Compute angle from Laptop Hub
+    const angle = Math.atan2(ny - cy, nx - cx);
+
+    // Precise line coordinates starting from Laptop perimeter and ending at Device perimeter
+    const lineX1 = cx + Math.cos(angle) * laptopR;
+    const lineY1 = cy + Math.sin(angle) * laptopR;
+    const lineX2 = nx - Math.cos(angle) * (devR + 1);
+    const lineY2 = ny - Math.sin(angle) * (devR + 1);
+
+    // Animated dashed connection beam
+    html += `<line x1="${lineX1}" y1="${lineY1}" x2="${lineX2}" y2="${lineY2}" stroke="#FF7A18" stroke-width="2" opacity="0.9" stroke-dasharray="4 4">
+      <animate attributeName="stroke-dashoffset" from="16" to="0" dur="0.8s" repeatCount="indefinite"/>
+    </line>`;
+
+    // Spotlight pulse if navigated with ?mac=
+    if(isTarget){
+      html += `<circle cx="${nx}" cy="${ny}" r="28" fill="none" stroke="#FF7A18" stroke-width="2.5" stroke-dasharray="3 3">
+        <animate attributeName="r" values="24;34;24" dur="1.4s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="1;0.4;1" dur="1.4s" repeatCount="indefinite"/>
+      </circle>`;
+    }
+
+    // Device Circle Node
+    const devFill = isDark ? (isTarget ? '#3b2210' : '#232635') : (isTarget ? '#FFF4E8' : '#FFFFFF');
+    const devStroke = isTarget ? '#FF7A18' : (isDark ? '#FF7A18' : '#000000');
+    const devText = isDark ? '#f8fafc' : '#000000';
+    html += `<circle cx="${nx}" cy="${ny}" r="${devR}" fill="${devFill}" stroke="${devStroke}" stroke-width="${isTarget ? '3' : '2.2'}"/>`;
+    html += `<text x="${nx}" y="${ny + 4}" text-anchor="middle" font-size="10" font-weight="700" fill="${devText}">${iconLabel(d.type)}</text>`;
+
+    // Formatted device details
+    const rawName = (d.name || d.hostname || 'Device');
+    const cleanName = rawName.length > 20 ? (rawName.substring(0, 18) + '…') : rawName;
+    const distStr = (d.rtt_distance_m !== null && d.rtt_distance_m !== undefined) ? `~${d.rtt_distance_m}m` : '';
+    const hasRtt = (d.rtt_ms !== null && d.rtt_ms !== undefined);
+
+    const badgeW = 205;
+    const badgeH = 44;
+    const badgeX = nx + 30;
+    const badgeY = ny - 22;
+    const badgeBg = isDark ? '#161922' : '#FFFFFF';
+    const badgeBorder = isDark ? '#3b4256' : '#000000';
+    const badgeTextColor = isDark ? '#FF9E4A' : '#D85F00';
+    const mutedColor = isDark ? '#94A3B8' : '#777777';
+
+    html += `<g style="cursor:pointer;" onclick="window.location.href='/dashboard?mac=${encodeURIComponent(d.mac)}'">`;
+    html += `<rect x="${badgeX}" y="${badgeY}" width="${badgeW}" height="${badgeH}" rx="7" fill="${badgeBg}" stroke="${badgeBorder}" stroke-width="1.4" opacity="0.98"/>`;
+    
+    // Line 1: Full-width Device Name
+    html += `<text x="${badgeX + 10}" y="${badgeY + 16}" font-size="11" font-weight="700" fill="${devText}">${escapeSvg(cleanName)}</text>`;
+    
+    // Line 2: Dedicated metrics row (NO text collision!)
+    if(hasRtt){
+      html += `<text x="${badgeX + 10}" y="${badgeY + 32}" font-size="9" font-weight="700" fill="${badgeTextColor}">⚡ ${d.rtt_ms}ms ${distStr}</text>`;
+      html += `<text x="${badgeX + badgeW - 10}" y="${badgeY + 32}" text-anchor="end" font-size="8.5" fill="${mutedColor}">${escapeSvg(d.ip || '')}</text>`;
+    } else {
+      html += `<text x="${badgeX + 10}" y="${badgeY + 32}" font-size="9" font-weight="700" fill="${badgeTextColor}">IP: ${escapeSvg(d.ip || 'Connected')}</text>`;
+      html += `<text x="${badgeX + badgeW - 10}" y="${badgeY + 32}" text-anchor="end" font-size="8.5" fill="${mutedColor}">${escapeSvg((d.vendor || 'Wi-Fi').substring(0, 14))}</text>`;
+    }
+    html += `</g>`;
+  });
+
+  // 3. Laptop Hub (Center-Left)
+  html += `<circle cx="${cx}" cy="${cy}" r="${laptopR}" fill="#FF7A18" stroke="${trunkStroke}" stroke-width="2.6"/>`;
+  html += `<text x="${cx}" y="${cy + 4}" text-anchor="middle" class="node-label" font-size="11" font-weight="700" fill="#000000">LAPTOP</text>`;
+
+  // 4. Unconnected / Offline Devices in Orbital Arc (Far Right)
+  if(offline.length > 0){
+    const orbitPathColor = isDark ? 'rgba(255, 122, 24, 0.40)' : 'rgba(0,0,0,0.18)';
+    const orbitTextColor = isDark ? '#94A3B8' : '#888888';
+    html += `<text x="880" y="24" text-anchor="middle" class="node-label" font-size="9" font-weight="700" fill="${orbitTextColor}">IN ORBIT (OFFLINE)</text>`;
+    html += `<path d="M 830 35 Q 895 280 830 525" fill="none" stroke="${orbitPathColor}" stroke-dasharray="4 4" stroke-width="${isDark ? '2' : '1.5'}"/>`;
+
+    const offN = Math.min(offline.length, 6);
+    const offFill = isDark ? '#1a1c26' : '#F6F6F6';
+    const offStroke = isDark ? '#4b5563' : '#888888';
+    const offIconColor = isDark ? '#cbd5e1' : '#666666';
+    const offNameColor = isDark ? '#F8FAFC' : '#444444';
+    const offStatusColor = isDark ? '#94A3B8' : '#888888';
+
+    offline.slice(0, 6).forEach((d, i) => {
+      const yStep = 430 / (offN + 1);
+      const ox = 868 + (i % 2 === 0 ? -10 : 10);
+      const oy = 48 + (i + 1) * yStep;
+      const offCleanName = (d.name || d.hostname || 'Device').split(' ')[0];
+
+      html += `<g style="cursor:pointer;" onclick="window.location.href='/dashboard?mac=${encodeURIComponent(d.mac)}'">`;
+      html += `<circle cx="${ox}" cy="${oy}" r="16" fill="${offFill}" stroke="${offStroke}" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+      html += `<text x="${ox}" y="${oy + 4}" text-anchor="middle" font-size="8.5" font-weight="700" fill="${offIconColor}">${iconLabel(d.type)}</text>`;
+      html += `<text x="${ox}" y="${oy + 26}" text-anchor="middle" class="node-label" fill="${offNameColor}" font-size="8">${escapeSvg(offCleanName)}</text>`;
+      html += `<text x="${ox}" y="${oy + 35}" text-anchor="middle" class="node-label" fill="${offStatusColor}" font-size="7">✕ offline</text>`;
+      html += `</g>`;
+    });
+  }
+
+  svg.innerHTML = html;
+}
+
+window.addEventListener('themechange', function(){
+  if(cachedDevices && cachedDevices.length){
+    renderTopology(cachedDevices);
+  }
+});
+
+async function refresh(){
+  const devices = await fetchDevices();
+  renderTopology(devices);
+  refreshHeader();
+}
+
+refresh();
+setInterval(refresh, 5000);
+{% endblock %}

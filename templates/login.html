@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PortWatch — Sign in</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23000'/%3E%3Ctext x='16' y='22' font-family='monospace' font-weight='900' font-size='14' fill='%23FF7A18' text-anchor='middle'%3EPW%3C/text%3E%3C/svg%3E">
+<script>
+  (function(){
+    try {
+      var saved = localStorage.getItem('portwatch_theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', saved);
+    } catch(e){}
+  })();
+</script>
+<style>
+  :root{
+    --orange:#FF7A18; --orange-dark:#D85F00; --orange-deep:#9A4400;
+    --white:#FFFFFF; --black:#000000;
+    --line-soft: rgba(0,0,0,0.18);
+    --muted: rgba(0,0,0,0.45);
+    --mono: "JetBrains Mono","SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  [data-theme="dark"] {
+    --orange: #FF7A18;
+    --orange-dark: #FF9442;
+    --white: #171923;
+    --black: #f8fafc;
+    --line-soft: #2d3345;
+    --muted: #94a3b8;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{ height:100%; }
+  body{
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.035) 0px, rgba(0,0,0,0.035) 1px, transparent 1px, transparent 3px),
+      var(--orange);
+    color:var(--black);
+    font-family:var(--mono);
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  [data-theme="dark"] body{
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px),
+      #0b0d13;
+    color:#f8fafc;
+  }
+  .card{ width:100%; max-width:360px; background:var(--white); border:3px solid var(--black); border-radius:18px; box-shadow:0 10px 0 var(--orange-deep), 0 10px 24px rgba(0,0,0,0.35); padding:26px 26px 22px; }
+  [data-theme="dark"] .card{
+    background:#151722;
+    border-color:#2b3040;
+    box-shadow:0 10px 0 #090a0f, 0 10px 24px rgba(0,0,0,0.6);
+    color:#f8fafc;
+  }
+  .mark{ width:40px; height:40px; border-radius:9px; background:var(--black); border:2px solid var(--black); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--orange); font-size:14px; margin-bottom:14px; }
+  h1{ font-size:16px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+  [data-theme="dark"] h1{ color:#f8fafc; }
+  p.sub{ font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:20px; }
+  label{ display:block; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; margin-bottom:6px; margin-top:14px; }
+  input{ width:100%; font-family:var(--mono); font-size:13px; padding:10px 12px; border:2px solid var(--black); border-radius:8px; background:var(--white); color:var(--black); }
+  [data-theme="dark"] input{
+    background:#1e2230;
+    border-color:#33394a;
+    color:#f8fafc;
+  }
+  input:focus{ outline:none; border-color:var(--orange-dark); }
+  .fbtn{ appearance:none; border:none; cursor:pointer; width:100%; margin-top:20px; background:var(--orange); color:var(--black); font-family:var(--mono); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.06em; padding:11px 16px; border-radius:10px; border:2px solid var(--black); box-shadow:0 4px 0 var(--black); transition:transform .08s ease, box-shadow .08s ease; }
+  .fbtn:hover{ background:#FF8C33; }
+  .fbtn:active{ transform:translateY(4px); box-shadow:0 0 0 var(--black); }
+  [data-theme="dark"] .fbtn{
+    border-color:#33394a;
+    box-shadow:0 4px 0 #090a0f;
+  }
+  .error{ margin-top:14px; font-size:11px; color:#B00020; background:rgba(176,0,32,0.08); border:1px solid rgba(176,0,32,0.35); border-radius:8px; padding:9px 11px; }
+  [data-theme="dark"] .error{
+    color:#f87171;
+    background:rgba(239,68,68,0.12);
+    border-color:rgba(239,68,68,0.4);
+  }
+  .hint{ margin-top:16px; font-size:9.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; text-align:center; }
+  .notice-box{ margin-bottom:14px; font-size:11px; color:var(--black); background:rgba(255,122,24,0.15); border:2px solid var(--black); border-radius:8px; padding:9px 11px; font-weight:700; }
+  [data-theme="dark"] .notice-box{
+    background:#201c27;
+    border-color:var(--orange);
+    color:#f8fafc;
+  }
+</style>
+</head>
+<body>
+  <form class="card" method="POST">
+    <div class="mark">PW</div>
+    <h1>PortWatch</h1>
+    <p class="sub">Sign in to view your network</p>
+
+    {% if timeout == 'landing' %}
+    <div class="notice-box">
+      Preview Expired<br>
+      <span style="font-weight:400; font-size:10.5px; color:var(--muted); text-transform:none;">Please sign in or create an account to access the live dashboard and maps.</span>
+    </div>
+    {% elif timeout == '1' %}
+    <div class="notice-box">
+      Inactivity Timeout<br>
+      <span style="font-weight:400; font-size:10.5px; color:var(--muted); text-transform:none;">Signed out due to inactivity. Please sign in again.</span>
+    </div>
+    {% elif prompt %}
+    <div class="notice-box">
+      Authentication Required<br>
+      <span style="font-weight:400; font-size:10.5px; color:var(--muted); text-transform:none;">Sign in or create an account to access this feature.</span>
+    </div>
+    {% endif %}
+
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ next }}">
+
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" autocomplete="username" autofocus required>
+
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" autocomplete="current-password" required>
+
+    <button class="fbtn" type="submit">Sign in</button>
+
+    <div style="margin-top:12px; font-size:10px; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); text-align:center;">
+      Demo Access: <a href="javascript:void(0)" onclick="document.getElementById('username').value='demo';document.getElementById('password').value='DemoAdmin123!';" style="color:var(--orange-dark); font-weight:700; text-decoration:underline;">Fill Demo Credentials</a>
+    </div>
+
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <div class="hint">New here? <a href="{{ url_for('signup', next=next) }}" style="color:var(--orange-dark); text-decoration:none;">Create an account</a> &middot; <a href="{{ url_for('landing') }}" style="color:var(--muted); text-decoration:none;">Back to Home</a></div>
+  </form>
+</body>
+</html>

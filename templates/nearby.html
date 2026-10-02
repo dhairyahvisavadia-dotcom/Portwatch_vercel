@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}PortWatch — Nearby Networks{% endblock %}
+{% block navclass_nearby %}active{% endblock %}
+
+{% block extra_style %}
+.nearby-desc {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-main);
+}
+.nearby-note {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin-top: 10px;
+}
+.nearby-ssid {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-main);
+}
+[data-theme="dark"] .sec-open {
+  color: #ff5252 !important;
+  font-weight: 700;
+}
+.sec-open {
+  color: #b00020;
+  font-weight: 700;
+}
+[data-theme="dark"] #liveError {
+  color: #ff6b6b !important;
+}
+{% endblock %}
+
+{% block content %}
+<div class="panel" style="margin-bottom:18px;">
+  <h2>About this scan</h2>
+  <p class="nearby-desc">
+    This asks your laptop's own WiFi radio what networks it can hear broadcasting right now
+    &mdash; the same thing your phone shows when you open its WiFi settings list. <b>No internet
+    connection needed, nothing sent anywhere, no account or API key required.</b> This only shows
+    networks currently in range of your laptop.
+  </p>
+  <p class="nearby-note">
+    <b>Distance is an estimate, not a measurement.</b> Windows reports signal as a 0&ndash;100%
+    quality value, which we convert to approximate dBm and run through the standard log-distance
+    path-loss model (10&sup2;-based). Walls, interference, and antenna orientation can shift real
+    distance significantly from this estimate &mdash; treat it as an order-of-magnitude band.
+  </p>
+</div>
+<div class="panel">
+  <h2>Networks your laptop can currently hear <span class="hint2" id="liveStatus">(click Scan to check)</span></h2>
+  <div style="margin-bottom:12px;">
+    <button class="fbtn" onclick="scanLive()">Scan now</button>
+  </div>
+  <table>
+    <thead><tr><th>SSID</th><th>Signal</th><th>Est. Distance</th><th>Security</th><th>Channel</th><th>Radio</th><th>BSSID</th></tr></thead>
+    <tbody id="liveRows"></tbody>
+  </table>
+  <div class="empty" id="liveEmpty" style="display:block;">Click "Scan now" above to detect nearby WiFi networks.</div>
+  <div class="empty" id="liveError" style="display:none; color:#B00020;"></div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+function securityLabel(sec){
+  if(!sec) return 'unknown';
+  if(/open|none/i.test(sec)) return 'Open (unsecured)';
+  return sec;
+}
+
+function renderLive(list){
+  const rows = document.getElementById('liveRows');
+  const empty = document.getElementById('liveEmpty');
+  rows.innerHTML = '';
+  if(list.length === 0){
+    empty.textContent = 'No networks found. Make sure your laptop\'s WiFi adapter is on.';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.forEach(n=>{
+    const tr = document.createElement('tr');
+    const open = /open|none/i.test(n.security || '');
+    const dist = n.distance_band
+      ? `${n.distance_band}<br><span class="mono dim" style="font-size:9.5px;">${n.dbm} dBm est.</span>`
+      : '—';
+    tr.innerHTML = `
+      <td><div class="nearby-ssid">${n.ssid || '(Hidden Network)'}</div></td>
+      <td class="mono">${n.signal !== null ? n.signal + '%' : '—'}</td>
+      <td class="mono" style="font-size:11px;">${dist}</td>
+      <td class="mono ${open ? 'sec-open' : ''}">${securityLabel(n.security)}</td>
+      <td class="mono">${n.channel ?? '—'}</td>
+      <td class="mono dim">${n.radio_type ?? '—'}</td>
+      <td class="mono dim">${n.bssid}</td>
+    `;
+    rows.appendChild(tr);
+  });
+}
+
+async function scanLive(){
+  const status = document.getElementById('liveStatus');
+  const errBox = document.getElementById('liveError');
+  errBox.style.display = 'none';
+  status.textContent = '(scanning...)';
+  try{
+    const res = await fetch('/api/local-wifi');
+    const data = await res.json();
+    if(data.error){
+      errBox.style.display = 'block';
+      errBox.textContent = data.error;
+      status.textContent = '';
+      renderLive([]);
+      return;
+    }
+    status.textContent = `(${data.results.length} found)`;
+    renderLive(data.results);
+  } catch(e){
+    errBox.style.display = 'block';
+    errBox.textContent = 'Could not reach PortWatch server.';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', scanLive);
+{% endblock %}

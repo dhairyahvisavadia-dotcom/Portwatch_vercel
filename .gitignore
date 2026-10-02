@@ -1,0 +1,49 @@
+# Python byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment files and credentials (CRITICAL: never commit real secrets)
+.env
+.env.local
+.env.*.local
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# SQLite databases & transient runtime state
+portwatch.db
+portwatch_auth.db
+test_*.db
+*.db-journal
+*.db-wal
+*.db-shm
+vendor_cache.json
+# Note: oui.db contains static IEEE OUI vendor definitions and should remain tracked if checked in
+!oui.db
+
+# Testing and coverage caches
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# IDE / Editor configuration
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.project
+.pydevproject
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
