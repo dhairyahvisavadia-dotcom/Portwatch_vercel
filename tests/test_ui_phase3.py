@@ -113,6 +113,13 @@ class TestPhase3UI(unittest.TestCase):
         self.assertIn('Troubleshooting Checklist', html)
         self.assertIn('Passive ARP + ICMP Ping', html)
 
+    def test_load_activity_defined_and_safe_invocation(self):
+        """Verify loadActivity is defined in base template and safely called without throwing ReferenceError."""
+        res = self.client.get("/dashboard")
+        html = res.get_data(as_text=True)
+        self.assertIn("function loadActivity()", html)
+        self.assertNotIn("\n  loadActivity();", html)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -579,6 +579,28 @@ function fallbackCopy(val, cb){
   }
 }
 
+// Activity synchronization utility
+async function loadActivity(){
+  try {
+    const el = document.getElementById('recentActivityList');
+    if(!el) return;
+    const res = await fetch('/api/activity');
+    if(!res.ok) return;
+    const data = await res.json();
+    if(!Array.isArray(data) || data.length === 0){
+      el.innerHTML = '<div style="color:var(--muted); font-size:11px;">No recent activity.</div>';
+      return;
+    }
+    el.innerHTML = data.slice(0, 5).map(item => {
+      const timeStr = item.timestamp ? new Date(item.timestamp * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+      return `<div style="display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid var(--line-soft); font-size:11px;">
+        <span><b>${item.action || 'action'}</b>: ${item.detail || ''}</span>
+        <span style="color:var(--muted);">${timeStr}</span>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
 // Inactivity auto-logout
 let idleSeconds = 0;
 const idleCheck = setInterval(function() {

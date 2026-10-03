@@ -837,7 +837,7 @@ async function submitEdit(){
   closeEditModal();
   showToast(`Updated ${name}`);
   refresh();
-  loadActivity();
+  if(typeof loadActivity === 'function') loadActivity();
 }
 
 async function openTimelineModal(mac){
@@ -1051,8 +1051,12 @@ async function triggerDeepScan(mac, btnElement){
       showToast(data.message || 'Deep scan completed');
     }
 
-    refresh();
-    loadActivity();
+    try {
+      refresh();
+      if(typeof loadActivity === 'function') loadActivity();
+    } catch(uiErr) {
+      console.warn("Post-scan UI update:", uiErr);
+    }
   } catch(e) {
     document.getElementById('cmdStatusText').textContent = 'STATUS: ERROR';
     appendCmdLine(`\n[ERROR] Command failed: ${e.message}`, 'warn');
@@ -1325,7 +1329,7 @@ async function forgetDevice(mac, name){
   await fetch(`/api/devices/${mac}`, { method:"DELETE" });
   showToast(`Forgot ${name}`);
   refresh();
-  loadActivity();
+  if(typeof loadActivity === 'function') loadActivity();
 }
 
 function renderStats(list){
