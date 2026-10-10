@@ -8,7 +8,6 @@ import logging
 import os
 import re
 import subprocess
-import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -211,6 +210,8 @@ def sync_scan_results_to_db(
                 vendor_source=d.get("vendor_source", ""),
                 type_confidence=d.get("type_confidence", ""),
                 type_reason=d.get("type_reason", ""),
+                label_name=d.get("label_name"),
+                label_type=d.get("label_type"),
                 now=now,
                 user_id=uid,
             )
@@ -243,6 +244,8 @@ def generate_demo_scan() -> Tuple[List[Dict[str, Any]], List[str]]:
             "vendor": d["vendor"],
             "type": d["type"],
             "hostname": d["hostname"],
+            "label_name": d.get("label_name"),
+            "label_type": d.get("label_type"),
             "ttl": d["ttl"],
             "likely_hotspot": d["likely_hotspot"],
             "hotspot_note": d["hotspot_note"],

@@ -17,10 +17,9 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlalchemy import create_engine
-import app as flask_app
-import database
-from database import (
+import app as flask_app  # noqa: E402
+import database  # noqa: E402
+from database import (  # noqa: E402
     ActivityLog,
     CloudConnection,
     Device,
@@ -132,7 +131,7 @@ class TestDatabaseLayer(unittest.TestCase):
         conn = CloudConnection(self.engine)
 
         # Insert with ? parameter placeholder
-        cur = conn.execute(
+        conn.execute(
             "INSERT INTO users (username, password_hash, email, created_at, last_login_at, last_ip) VALUES (?, ?, ?, ?, ?, ?)",
             ("cloud_user", "hash456", "cloud@pw.io", 1000.0, 1000.0, "127.0.0.1"),
         )
@@ -154,6 +153,11 @@ class TestDatabaseLayer(unittest.TestCase):
         # Test keys()
         self.assertIn("username", row.keys())
         self.assertIn("email", row.keys())
+
+        # Test iteration protocol on cursor
+        cur3 = conn.execute("SELECT username FROM users WHERE username=?", ("cloud_user",))
+        iterated_rows = [r["username"] for r in cur3]
+        self.assertEqual(iterated_rows, ["cloud_user"])
 
         conn.close()
 

@@ -14,7 +14,6 @@ from flask import (
     jsonify,
     render_template,
     request,
-    url_for,
 )
 
 import auth_db
@@ -123,7 +122,7 @@ def create_app(config_class: Optional[Type[config.BaseConfig]] = None) -> Flask:
                 "status_code": 429,
                 "message": "Too many requests. Please wait a moment before retrying.",
             }), 429
-        next_url = get_safe_redirect(request.args.get("next") or url_for("dashboard"))
+        next_url = get_safe_redirect(request.args.get("next"))
         return render_template(
             "login.html",
             error="Too many requests. Please wait a minute and try again.",
@@ -165,6 +164,7 @@ __all__ = [
     "LATEST_SEEN_MACS",
     "SCAN_INTERVAL_SECONDS",
     "SESSION_MINUTES",
+    "PORTWATCH_SECRET_KEY",
     "build_device_record",
     "fast_scan",
     "scan_once",

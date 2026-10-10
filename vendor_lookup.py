@@ -13,7 +13,6 @@ TTL signatures, gateway status, and port probing).
 
 import json
 import os
-import re
 import sqlite3
 import time
 import requests
@@ -73,56 +72,56 @@ LOCAL_OUI = {
 
 # Keyword -> (device type, confidence when matched from vendor alone)
 VENDOR_TYPE_KEYWORDS = [
-    ("cloud network",    "phone",          "medium"),
-    ("azurewave",        "phone",          "medium"),
-    ("mobile device",    "phone",          "high"),
-    ("apple",            "phone/apple",    "low"),   # Apple makes phones AND laptops
-    ("samsung electro",  "phone",          "medium"),
-    ("xiaomi",           "phone",          "medium"),
-    ("huawei",           "phone",          "medium"),
-    ("oneplus",          "phone",          "high"),
-    ("oppo",             "phone",          "high"),
-    ("vivo mobile",      "phone",          "high"),
-    ("google",           "phone/other",    "low"),
-    ("motorola",         "phone",          "medium"),
-    ("hikvision",        "camera",         "high"),
-    ("dahua",            "camera",         "high"),
-    ("reolink",          "camera",         "high"),
-    ("axis communi",     "camera",         "high"),
-    ("amcrest",          "camera",         "high"),
-    ("foscam",           "camera",         "high"),
-    ("wyze",             "camera",         "high"),
-    ("espressif",        "IoT device",     "medium"),
-    ("tuya",             "IoT device",     "high"),
-    ("ubiquiti",         "network gear",   "high"),
-    ("tp-link",          "network gear",   "high"),
-    ("netgear",          "network gear",   "high"),
-    ("cisco",            "network gear",   "high"),
-    ("mikrotik",         "network gear",   "high"),
-    ("aruba",            "network gear",   "high"),
-    ("juniper",          "network gear",   "high"),
-    ("synology",         "storage/nas",    "high"),
-    ("qnap",             "storage/nas",    "high"),
-    ("sonos",            "speaker",        "high"),
-    ("bose",             "speaker",        "high"),
-    ("amazon technolog", "speaker/echo",   "medium"),
-    ("jbl",              "speaker",        "high"),
-    ("harman",           "speaker",        "medium"),
-    ("roku",             "tv",             "high"),
-    ("vizio",            "tv",             "high"),
-    ("lg electronics",   "tv",             "low"),   # LG makes phones/appliances too
-    ("sony",             "tv/other",       "low"),
-    ("raspberry pi",     "single-board computer", "high"),
-    ("canon",            "printer",        "high"),
-    ("epson",            "printer",        "high"),
-    ("brother indust",   "printer",        "high"),
-    ("lexmark",          "printer",        "high"),
-    ("dell",             "laptop",         "medium"),
-    ("intel corporate",  "laptop",         "low"),   # Intel chips are in many device types
-    ("lenovo",           "laptop",         "medium"),
-    ("hewlett packard",  "laptop",         "medium"),
-    ("microsoft",        "laptop/other",   "low"),
-    ("asustek",          "laptop",         "low"),
+    ("cloud network", "phone", "medium"),
+    ("azurewave", "phone", "medium"),
+    ("mobile device", "phone", "high"),
+    ("apple", "phone/apple", "low"),  # Apple makes phones AND laptops
+    ("samsung electro", "phone", "medium"),
+    ("xiaomi", "phone", "medium"),
+    ("huawei", "phone", "medium"),
+    ("oneplus", "phone", "high"),
+    ("oppo", "phone", "high"),
+    ("vivo mobile", "phone", "high"),
+    ("google", "phone/other", "low"),
+    ("motorola", "phone", "medium"),
+    ("hikvision", "camera", "high"),
+    ("dahua", "camera", "high"),
+    ("reolink", "camera", "high"),
+    ("axis communi", "camera", "high"),
+    ("amcrest", "camera", "high"),
+    ("foscam", "camera", "high"),
+    ("wyze", "camera", "high"),
+    ("espressif", "IoT device", "medium"),
+    ("tuya", "IoT device", "high"),
+    ("ubiquiti", "network gear", "high"),
+    ("tp-link", "network gear", "high"),
+    ("netgear", "network gear", "high"),
+    ("cisco", "network gear", "high"),
+    ("mikrotik", "network gear", "high"),
+    ("aruba", "network gear", "high"),
+    ("juniper", "network gear", "high"),
+    ("synology", "storage/nas", "high"),
+    ("qnap", "storage/nas", "high"),
+    ("sonos", "speaker", "high"),
+    ("bose", "speaker", "high"),
+    ("amazon technolog", "speaker/echo", "medium"),
+    ("jbl", "speaker", "high"),
+    ("harman", "speaker", "medium"),
+    ("roku", "tv", "high"),
+    ("vizio", "tv", "high"),
+    ("lg electronics", "tv", "low"),  # LG makes phones/appliances too
+    ("sony", "tv/other", "low"),
+    ("raspberry pi", "single-board computer", "high"),
+    ("canon", "printer", "high"),
+    ("epson", "printer", "high"),
+    ("brother indust", "printer", "high"),
+    ("lexmark", "printer", "high"),
+    ("dell", "laptop", "medium"),
+    ("intel corporate", "laptop", "low"),  # Intel chips are in many device types
+    ("lenovo", "laptop", "medium"),
+    ("hewlett packard", "laptop", "medium"),
+    ("microsoft", "laptop/other", "low"),
+    ("asustek", "laptop", "low"),
 ]
 
 # Hostname keyword -> device type.
@@ -267,7 +266,17 @@ def lookup_vendor(mac: str) -> str:
     return lookup_vendor_detailed(mac)["vendor"]
 
 
-def guess_type_detailed(vendor: str, hostname: str = None, mac: str = None, ttl: int = None, is_gateway: bool = False) -> dict:
+# Alias for backward compatibility with external scanners calling vendor_lookup.lookup()
+lookup = lookup_vendor_detailed
+
+
+def guess_type_detailed(
+    vendor: str,
+    hostname: str | None = None,
+    mac: str | None = None,
+    ttl: int | None = None,
+    is_gateway: bool = False,
+) -> dict:
     """Returns {"type": str, "confidence": "high"|"medium"|"low", "reason": str}.
     Combines vendor-name, hostname keywords, gateway status, and randomized MAC
     signatures to reliably detect mobile devices and hardware classes."""
@@ -318,11 +327,11 @@ def guess_type_detailed(vendor: str, hostname: str = None, mac: str = None, ttl:
 
     if hostname_type:
         return {"type": hostname_type, "confidence": "medium",
-                "reason": f"guessed from hostname keyword only, no vendor signal"}
+                "reason": "guessed from hostname keyword only, no vendor signal"}
 
     if vendor_type:
         return {"type": vendor_type, "confidence": vendor_conf,
-                "reason": f"guessed from vendor name only (confidence reflects how vendor-specific this manufacturer's product line is)"}
+                "reason": "guessed from vendor name only (confidence reflects how vendor-specific this manufacturer's product line is)"}
 
     # If TTL is 64 (standard for Android/iOS) on a mobile hotspot, classify as phone
     if ttl == 64:

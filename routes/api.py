@@ -10,10 +10,7 @@ import io
 import html
 import json
 import logging
-import re
-import subprocess
 import time
-from typing import Any, Dict
 
 from flask import (
     Blueprint,
@@ -27,12 +24,12 @@ import auth_db
 import database
 import db
 import device_scan
+import device_service
 from extensions import limiter
 from routes.auth import current_user_id, is_valid_mac, login_required
 from scanner_service import (
     ACTIVE_USER_IDS,
     STATUS,
-    build_device_record,
     fast_scan,
     scan_once,
     sync_scan_results_to_db,
@@ -133,190 +130,9 @@ def api_device_lookup():
     else:
         query = request.args.get("q") or request.args.get("mac") or request.args.get("ip") or ""
 
-    query = query.strip()
-    if not query:
-        return jsonify({"ok": False, "error": "Please provide a MAC or IP address to search."}), 400
-
-    devs = db.get_all(user_id=uid)
-    q_upper = query.upper()
-    q_clean_mac = re.sub(r"[:-]", "", q_upper)
-
-    matched = None
-    # 1. Exact MAC match
-    for d in devs:
-        d_mac = d["mac"].upper()
-        if d_mac == q_upper or re.sub(r"[:-]", "", d_mac) == q_clean_mac:
-            matched = d
-            break
-
-    # 2. Exact IP match
-    if not matched:
-        for d in devs:
-            if d.get("ip") == query:
-                matched = d
-                break
-
-    # 3. Partial match on name / hostname / IP / MAC
-    if not matched:
-        for d in devs:
-            if (
-                query.lower() in (d.get("name") or "").lower()
-                or query.lower() in (d.get("hostname") or "").lower()
-                or query.lower() in (d.get("ip") or "").lower()
-                or q_upper in d.get("mac", "").upper()
-            ):
-                matched = d
-                break
-
-    is_new = False
-    if not matched:
-        is_new = True
-        is_ip = bool(re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", query))
-        is_mac = bool(re.match(r"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$", query)) or len(q_clean_mac) == 12
-
-        if is_ip:
-            target_ip = query
-            arp_table = dict(device_scan.read_arp_table())
-            target_mac = arp_table.get(target_ip, "")
-            if not target_mac:
-                target_mac = f"02:00:00:{target_ip.replace('.', ':')}"[:17].upper()
-
-            record = build_device_record(target_ip, target_mac)
-            db.upsert_scan(
-                target_mac,
-                target_ip,
-                record["vendor"],
-                record["type"],
-                record["hostname"],
-                ttl=record.get("ttl"),
-                likely_hotspot=record.get("likely_hotspot", False),
-                hotspot_note=record.get("hotspot_note", ""),
-                rtt_ms=record.get("rtt_ms"),
-                rtt_distance_m=record.get("rtt_distance_m"),
-                distance_band=record.get("distance_band", ""),
-                bandwidth_mbps=record.get("bandwidth_mbps"),
-                bandwidth_grade=record.get("bandwidth_grade", ""),
-                user_id=uid,
-            )
-            db.log_timeline_event(
-                target_mac, "discovered", f"Located and added via IP search ({target_ip})", user_id=uid
-            )
-            matched = next((d for d in db.get_all(user_id=uid) if d["mac"].upper() == target_mac.upper()), None)
-        elif is_mac:
-            import vendor_lookup
-            if len(q_clean_mac) == 12:
-                target_mac = ":".join(q_clean_mac[i:i + 2] for i in range(0, 12, 2))
-            else:
-                target_mac = q_upper.replace("-", ":")
-
-            v_info = vendor_lookup.lookup_vendor_detailed(target_mac)
-            vendor_name = v_info.get("vendor") or "Unknown"
-
-            arp_table = dict(device_scan.read_arp_table())
-            found_ip = ""
-            for ip_addr, mac_addr in arp_table.items():
-                if mac_addr.upper() == target_mac.upper():
-                    found_ip = ip_addr
-                    break
-
-            if found_ip:
-                record = build_device_record(found_ip, target_mac)
-                db.upsert_scan(
-                    target_mac,
-                    found_ip,
-                    record["vendor"],
-                    record["type"],
-                    record["hostname"],
-                    ttl=record.get("ttl"),
-                    rtt_ms=record.get("rtt_ms"),
-                    rtt_distance_m=record.get("rtt_distance_m"),
-                    distance_band=record.get("distance_band", ""),
-                    bandwidth_mbps=record.get("bandwidth_mbps"),
-                    bandwidth_grade=record.get("bandwidth_grade", ""),
-                    user_id=uid,
-                )
-            else:
-                db.upsert_scan(target_mac, "", vendor_name, "unknown", "", user_id=uid)
-                db.mark_offline_except([], user_id=uid)
-
-            db.log_timeline_event(
-                target_mac, "discovered", f"Located and registered via MAC search ({target_mac})", user_id=uid
-            )
-            matched = next((d for d in db.get_all(user_id=uid) if d["mac"].upper() == target_mac.upper()), None)
-        else:
-            return jsonify({
-                "ok": False,
-                "found": False,
-                "message": f"No device matching '{query}' found. Please enter a valid MAC or IPv4 address.",
-            }), 404
-
-    if not matched:
-        return jsonify({"ok": False, "found": False, "message": "Device could not be located."}), 404
-
-    # Live ping check to get instantaneous fresh latency and distance
-    if matched.get("ip") and not current_app.config.get("TESTING"):
-        try:
-            ping_res = subprocess.run(
-                ["ping", "-n", "1", "-w", "250", matched["ip"]],
-                capture_output=True,
-                text=True,
-                creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0,
-            )
-            m_rtt = re.search(r"time[<=](\d+)ms", ping_res.stdout, re.IGNORECASE)
-            if m_rtt:
-                live_rtt = float(m_rtt.group(1))
-                dist_m, dist_band, _, _ = device_scan.estimate_distance_from_rtt(live_rtt)
-                bw_mbps, bw_grade, _ = device_scan.estimate_bandwidth(live_rtt)
-                matched["rtt_ms"] = live_rtt
-                matched["rtt_distance_m"] = dist_m
-                matched["distance_band"] = dist_band
-                matched["bandwidth_mbps"] = bw_mbps
-                matched["bandwidth_grade"] = bw_grade
-                matched["online"] = True
-                db.upsert_scan(
-                    matched["mac"],
-                    matched["ip"],
-                    matched["vendor"],
-                    matched["type"],
-                    matched["hostname"],
-                    rtt_ms=live_rtt,
-                    rtt_distance_m=dist_m,
-                    distance_band=dist_band,
-                    bandwidth_mbps=bw_mbps,
-                    bandwidth_grade=bw_grade,
-                    user_id=uid,
-                )
-        except Exception as e:
-            logger.debug(f"Instantaneous ping check error: {e}")
-
-    timeline = db.get_device_timeline(matched["mac"], user_id=uid)
-    is_online = bool(matched.get("online"))
-    dist_m = matched.get("rtt_distance_m")
-    dist_band = matched.get("distance_band") or ("Nearby (~1-3m)" if is_online else "Out of Range (Offline)")
-    rtt_ms = matched.get("rtt_ms")
-
-    location_info = {
-        "is_online": is_online,
-        "distance_m": dist_m,
-        "distance_formatted": f"~{dist_m}m" if dist_m is not None else ("~1.5m (Direct Radio Link)" if is_online else "Out of Immediate Range"),
-        "distance_band": dist_band,
-        "rtt_ms": rtt_ms,
-        "rtt_formatted": f"{rtt_ms} ms" if rtt_ms is not None else ("< 5 ms" if is_online else "No ping reply"),
-        "status_label": "Online / Connected to Hotspot" if is_online else "Offline / In Orbit",
-        "topology_zone": "Direct Wi-Fi Link (Fanout Right)" if is_online else "Outer Orbital Ring (No Active Link)",
-        "coordinates_hint": "Mapped radially from central LAPTOP by ping latency RTT" if is_online else "Floating in orbital ring (unconnected)",
-        "map3d_url": f"/map3d?mac={matched['mac']}",
-        "connections_url": f"/connections?mac={matched['mac']}",
-    }
-
-    return jsonify({
-        "ok": True,
-        "found": True,
-        "is_new": is_new,
-        "device": matched,
-        "location": location_info,
-        "timeline": timeline,
-    })
+    is_testing = bool(current_app.config.get("TESTING") or current_app.testing)
+    _, payload, status_code = device_service.lookup_device(query, user_id=uid, is_testing=is_testing)
+    return jsonify(payload), status_code
 
 
 @api_bp.route("/devices/<mac>/deep-scan", methods=["POST"])
@@ -327,74 +143,8 @@ def api_device_deep_scan(mac: str):
     if not is_valid_mac(mac):
         return jsonify({"error": "Invalid MAC address format"}), 400
     uid = current_user_id()
-    mac = mac.upper()
-    devs = db.get_all(user_id=uid)
-    target = next((d for d in devs if d["mac"].upper() == mac), None)
-    if not target or not target.get("ip"):
-        return jsonify({"error": "Device IP not available for scanning"}), 404
-
-    ip = target["ip"]
-    fp = device_scan.deep_fingerprint_device(ip)
-    if not fp:
-        fp = {
-            "engine": "socket_probe",
-            "open_ports": [],
-            "services": [],
-            "os_guess": target.get("os_guess") or "",
-            "type": target.get("type", "unknown"),
-            "confidence": "low",
-            "reason": "All standard service ports closed or filtered.",
-            "target_ip": ip,
-            "target_mac": mac,
-            "target_name": target.get("name") or target.get("hostname") or "Unknown Device",
-        }
-        return jsonify({
-            "ok": True,
-            "message": "No open service ports identified",
-            "fingerprint": fp,
-            "device": target,
-            "updated": False,
-        })
-
-    fp["target_ip"] = ip
-    fp["target_mac"] = mac
-    fp["target_name"] = target.get("name") or target.get("hostname") or "Device"
-
-    open_ports_str = ",".join(str(p) for p in fp.get("open_ports", []))
-    os_guess = fp.get("os_guess", "")
-    new_type = fp.get("type") or target["type"]
-
-    db.upsert_scan(
-        mac,
-        ip,
-        target["vendor"],
-        new_type,
-        target["hostname"],
-        ttl=target.get("ttl"),
-        likely_hotspot=target.get("likely_hotspot", False),
-        hotspot_note=target.get("hotspot_note", ""),
-        rtt_ms=target.get("rtt_ms"),
-        rtt_distance_m=target.get("rtt_distance_m"),
-        distance_band=target.get("distance_band", ""),
-        bandwidth_mbps=target.get("bandwidth_mbps"),
-        bandwidth_grade=target.get("bandwidth_grade", ""),
-        open_ports=open_ports_str,
-        os_guess=os_guess,
-        type_confidence=fp.get("confidence", "high"),
-        type_reason=fp.get("reason", "Deep scan fingerprint"),
-        user_id=uid,
-    )
-
-    db.log_timeline_event(
-        mac,
-        "deep_scan",
-        f"Deep {fp.get('engine', 'probe')} scan: Ports [{open_ports_str}], OS: '{os_guess or 'n/a'}'",
-        user_id=uid,
-    )
-    auth_db.log_activity(uid, "deep_scan", f"Deep scan on {mac} ({ip}) - {fp.get('engine')}")
-
-    updated_dev = next((d for d in db.get_all(user_id=uid) if d["mac"].upper() == mac), None)
-    return jsonify({"ok": True, "fingerprint": fp, "device": updated_dev})
+    _, payload, status_code = device_service.perform_device_deep_scan(mac, user_id=uid)
+    return jsonify(payload), status_code
 
 
 @api_bp.route("/rescan", methods=["POST"])

@@ -15,7 +15,7 @@ if BASE_DIR not in sys.path:
 os.environ.setdefault("PORTWATCH_DEMO_MODE", "true")
 os.environ.setdefault("PORTWATCH_ENV", "production")
 
-from app import create_app
+from app import create_app  # noqa: E402
 
 # WSGI Application callable exported for Vercel Serverless Python runtime
 app = create_app()

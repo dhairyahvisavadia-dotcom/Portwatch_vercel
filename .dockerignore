@@ -1,22 +1,27 @@
+# ==============================================================================
+# PortWatch — Docker Build Ignore Rules
+# ==============================================================================
+
 # Version control
 .git/
 .github/
+.gitignore
 
-# Python compiled artifacts
+# Python compiled artifacts & virtualenvs
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-
-# Environments & secrets
-.env
-.env.local
-.env.*.local
-venv/
 .venv/
+venv/
 env/
 
-# SQLite databases & runtime caches
+# Environment variables & secrets
+.env
+.env.*
+*.env
+
+# SQLite local runtime user databases & caches
 portwatch.db
 portwatch_auth.db
 test_*.db
@@ -25,13 +30,20 @@ test_*.db
 *.db-shm
 vendor_cache.json
 
-# Test & coverage caches
+# Test & coverage artifacts
 tests/
 .pytest_cache/
 .coverage
 htmlcov/
 .tox/
 
-# IDE files
+# IDE & Editor artifacts
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# Docker configs & local logs
+Dockerfile*
+docker-compose*.yml
+*.log

@@ -30,6 +30,8 @@ dependencies = [
     "flask>=3.0",
     "requests>=2.31",
     "python-dotenv>=1.0.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
     "flask-wtf>=1.2.0",
     "flask-limiter>=3.5.0",
     "sqlalchemy>=2.0.0",
@@ -62,4 +64,26 @@ ensure_newline_before_comments = true
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
+pythonpath = ["."]
 addopts = "-v --tb=short"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "basic"
+reportMissingModuleSource = false
+reportOptionalSubscript = false
+reportOptionalMemberAccess = false
+reportOptionalCall = false
+reportGeneralTypeIssues = false
+reportArgumentType = false
+reportCallIssue = false
+reportPossiblyUnboundVariable = false
+exclude = [
+    "**/__pycache__",
+    ".pytest_cache",
+    ".git",
+    "tests"
+]
+
+

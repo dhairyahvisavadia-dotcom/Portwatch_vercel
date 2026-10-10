@@ -19,8 +19,8 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import device_scan
-import vendor_lookup
+import device_scan  # noqa: E402
+import vendor_lookup  # noqa: E402
 
 
 class TestTTLClassification(unittest.TestCase):
@@ -372,4 +372,3 @@ class TestDeepFingerprinting(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
-

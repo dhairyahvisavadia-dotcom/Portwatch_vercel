@@ -17,9 +17,9 @@ import time
 # Ensure repository root is in sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import auth_db
-import database
-import db
+import auth_db  # noqa: E402
+import database  # noqa: E402
+import db  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,

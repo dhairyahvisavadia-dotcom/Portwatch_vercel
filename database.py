@@ -15,7 +15,6 @@ import os
 import re
 import time
 from contextlib import contextmanager
-from datetime import datetime
 
 from sqlalchemy import (
     Column,
@@ -131,17 +130,30 @@ class Device(Base):
     )
 
     def to_dict(self):
+        import device_service
+        name, vendor, dev_type = device_service.resolve_disciplined_device_name(
+            label_name=self.label_name,
+            hostname=self.hostname,
+            vendor=self.vendor,
+            dev_type=self.label_type or self.guessed_type or "unknown",
+            ip=self.ip,
+            mac=self.mac,
+            ttl=self.ttl,
+            likely_hotspot=bool(self.likely_hotspot),
+            hotspot_note=self.hotspot_note or "",
+        )
         return {
             "user_id": self.user_id,
             "mac": self.mac,
             "ip": self.ip or "",
-            "vendor": self.vendor or "",
+            "vendor": vendor or self.vendor or "",
             "guessed_type": self.guessed_type or "unknown",
             "hostname": self.hostname or "",
             "label_name": self.label_name,
             "label_type": self.label_type,
-            "name": self.label_name or self.hostname or self.vendor or self.mac,
-            "type": self.label_type or self.guessed_type or "unknown",
+            "name": name,
+            "type": dev_type,
+
             "first_seen": self.first_seen,
             "last_seen": self.last_seen,
             "online": bool(self.online),
@@ -348,6 +360,12 @@ class CloudCursor:
         self.lastrowid = lastrowid
         self.rowcount = result.rowcount if hasattr(result, "rowcount") else 0
 
+    def __iter__(self):
+        if not self._result or not self._result.returns_rows:
+            return
+        for m in self._result.mappings():
+            yield DictRow(m)
+
     def fetchone(self):
         if not self._result or not self._result.returns_rows:
             return None
@@ -358,6 +376,16 @@ class CloudCursor:
         if not self._result or not self._result.returns_rows:
             return []
         return [DictRow(m) for m in self._result.mappings().fetchall()]
+
+    def close(self):
+        """Close result proxy."""
+        self._result = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
 
 class CloudConnection:
@@ -371,6 +399,7 @@ class CloudConnection:
         params = params or ()
         if isinstance(params, (list, tuple)):
             idx = 0
+
             def repl(m):
                 nonlocal idx
                 res = f":p_{idx}"
@@ -406,6 +435,16 @@ class CloudConnection:
         if self._conn:
             self._conn.close()
             self._conn = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.rollback()
+        else:
+            self.commit()
+        self.close()
 
 
 def get_cloud_connection(engine=None):

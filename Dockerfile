@@ -1,35 +1,59 @@
 # ==============================================================================
-# PortWatch — Production Docker Container Definition
-# Multi-stage security hardened deployment container with non-root runtime
+# PortWatch — Production Multi-Stage Hardened Container Definition
 # ==============================================================================
 
-FROM python:3.11-slim-bookworm AS base
+# ------------------------------------------------------------------------------
+# Stage 1: Build & Dependency Resolution Environment
+# ------------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm AS builder
 
-# Prevent Python from writing .pyc files and enable unbuffered logging
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /build
+
+# Install minimal toolchain required for potential C extension builds
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libc6-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+
+# Install dependencies into dedicated prefix directory for clean transfer
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+
+# ------------------------------------------------------------------------------
+# Stage 2: Minimal Production Runtime Container
+# ------------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm AS runtime
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORTWATCH_ENV=production \
-    PORT=5000
+    PORT=5000 \
+    PATH="/usr/local/bin:$PATH"
 
 WORKDIR /app
 
-# Install minimal OS utilities required for ICMP ping sweeps and HTTP healthchecks
+# Copy installed Python packages and binaries from the builder stage
+COPY --from=builder /install /usr/local
+
+# Install minimal OS runtime utilities required for ICMP ping sweeps and HTTP healthchecks
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     iputils-ping \
     net-tools \
+    libcap2-bin \
     && rm -rf /var/lib/apt/lists/*
-
-# Install Python production dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
 
 # Create an unprivileged non-root service user for enhanced security
 RUN groupadd -g 1001 portwatch && \
     useradd -u 1001 -g portwatch -m -s /bin/bash portwatch
 
-# Copy application codebase
+# Copy application codebase with ownership
 COPY --chown=portwatch:portwatch . .
 
 # Grant non-root user permission to perform raw socket pings via capabilities

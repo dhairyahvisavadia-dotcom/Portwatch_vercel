@@ -57,7 +57,7 @@ def find_hotspot_subnet():
 
     # 1) Prefer any connected Wireless LAN / Wi-Fi adapter with an active IPv4 address
     for b in raw_blocks:
-        lines = [l.strip() for l in b.splitlines() if l.strip()]
+        lines = [line.strip() for line in b.splitlines() if line.strip()]
         if not lines:
             continue
         header = lines[0]
@@ -68,7 +68,7 @@ def find_hotspot_subnet():
 
     # 2) Fallback: any adapter with a private IPv4 that isn't Ethernet/vEthernet/loopback/VirtualBox
     for b in raw_blocks:
-        lines = [l.strip() for l in b.splitlines() if l.strip()]
+        lines = [line.strip() for line in b.splitlines() if line.strip()]
         if not lines:
             continue
         header = lines[0]
@@ -79,8 +79,10 @@ def find_hotspot_subnet():
         m = re.search(r"IPv4 Address[.\s]*:\s*([\d.]+)", b)
         if m:
             ip = m.group(1)
-            if ip.startswith(("192.168.", "172.16.", "172.17.", "172.18.",
-                               "172.19.", "172.2", "172.3", "10.")):
+            if ip.startswith((
+                "192.168.", "172.16.", "172.17.", "172.18.",
+                "172.19.", "172.2", "172.3", "10.",
+            )):
                 return ".".join(ip.split(".")[:3])
 
     # 3) Last resort: common Android hotspot default range
@@ -558,7 +560,7 @@ def estimate_distance_band(signal_percent):
 def estimate_distance_from_rtt(rtt_ms):
     """Estimate physical distance (meters) between the hotspot and a connected
     device based on ICMP ping round-trip time (RTT).
-    
+
     Wi-Fi RTT propagation & turnaround delay model:
     In local wireless networks, ping RTT correlates with physical distance,
     radio path loss, and wireless turnaround delay:
@@ -567,7 +569,7 @@ def estimate_distance_from_rtt(rtt_ms):
     - ~7-12 ms: Adjacent room / moderate distance (~6-12 meters)
     - ~13-25 ms: Different room / across floor (~12-25 meters)
     - > 25 ms: Far / through walls or weak edge (~25m+)
-    
+
     Returns (meters, band_label, meters_low, meters_high) or (None, None, None, None).
     """
     if rtt_ms is None:
@@ -602,7 +604,7 @@ def estimate_distance_from_rtt(rtt_ms):
 def estimate_bandwidth(rtt_ms, distance_m=None, ap_link_mbps=None, radio_type=None):
     """Estimate throughput capacity / bandwidth (Mbps) for a Wi-Fi device based on
     packet turnaround latency, distance attenuation, and 802.11 modulation index.
-    
+
     Returns (est_bandwidth_mbps, grade_label, technical_note)."""
     if rtt_ms is None:
         return None, None, ""
@@ -644,7 +646,6 @@ def estimate_bandwidth(rtt_ms, distance_m=None, ap_link_mbps=None, radio_type=No
     est_mbps = round(max(2.0, ceiling * factor), 1)
     label = f"{grade} (~{int(est_mbps)} Mbps)"
     return est_mbps, label, note
-
 
 
 def get_own_connection_info():
@@ -724,6 +725,7 @@ def read_arp_table_reliable(subnet, retries=2, delay_seconds=0.4):
 def resolve_hostname(ip, ttl=None):
     """Try non-blocking reverse DNS first, then mobile signature probe, then NetBIOS if Windows (TTL=128)."""
     res_dns = [None]
+
     def _dns():
         try:
             name, _, _ = socket.gethostbyaddr(ip)
@@ -746,6 +748,7 @@ def resolve_hostname(ip, ttl=None):
         m = re.search(r"^\s*(\S+)\s+<00>\s+UNIQUE", out, re.MULTILINE)
         if m:
             return m.group(1)
+
 
 def trigger_hardware_wlan_scan():
     """Trigger an active radio frequency scan across all Wi-Fi channels via Native Win32 WlanScan API."""
@@ -879,10 +882,25 @@ def scan_wifi_networks(trigger_scan=True):
             })
         for b in net["bssids"]:
             band, low, high, dbm = estimate_distance_band(b["signal"])
+            v_name = ""
+            if b["bssid"] and b["bssid"] != "—":
+                try:
+                    import vendor_lookup
+                    v_res = vendor_lookup.lookup(b["bssid"])
+                    if v_res and v_res.get("vendor") not in ("Unknown", "—"):
+                        v_name = v_res.get("vendor").split(",")[0].strip()
+                except Exception:
+                    pass
+            sec = net["security"]
+            if not sec or sec.lower() in ("unknown", "—"):
+                sec = "Secured (WPA2/WPA3)"
+
             flat.append({
                 "ssid": net["ssid"],
                 "bssid": b["bssid"],
-                "security": net["security"],
+                "vendor": v_name,
+
+                "security": sec,
                 "signal": b["signal"],
                 "channel": b["channel"],
                 "radio_type": b["radio_type"],

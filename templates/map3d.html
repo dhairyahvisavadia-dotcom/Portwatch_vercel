@@ -1,132 +1,364 @@
 {% extends "base.html" %}
-{% block title %}PortWatch — 3D Map{% endblock %}
+{% block title %}PortWatch — 3D Volumetric & Matrix Map{% endblock %}
 {% block navclass_3d %}active{% endblock %}
 {% block bezel_action %}{% endblock %}
 
 {% block extra_style %}
 .scene-wrap{
   position:relative;
-  height:540px;
+  height:620px;
   border-radius:12px;
   overflow:hidden;
-  background:
-    radial-gradient(circle at 50% 40%, rgba(255,122,24,0.12), transparent 68%),
-    repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 1px, transparent 1px, transparent 22px),
-    repeating-linear-gradient(90deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 1px, transparent 1px, transparent 22px);
+  background:#000000 !important;
   cursor:grab;
   touch-action:none;
   border:2px solid var(--black);
   user-select:none;
   -webkit-user-select:none;
+  box-shadow:inset 0 0 65px rgba(0,0,0,0.95), 0 4px 0 var(--black);
+  transition:border-color 0.2s ease, background 0.3s ease;
 }
 .scene-wrap.grabbing{ cursor:grabbing; }
-.scene-wrap canvas{ width:100%; height:100%; display:block; }
-.scene-toolbar{ position:absolute; top:12px; right:12px; display:flex; gap:8px; z-index:3; flex-wrap:wrap; }
-.scene-toolbar .fbtn{ padding:6px 11px; font-size:9.5px; box-shadow:0 3px 0 var(--black); }
-.scene-toolbar .fbtn:active{ transform:translateY(3px); box-shadow:0 0 0 var(--black); }
-.scene-legend{ position:absolute; top:12px; left:14px; display:flex; gap:6px; z-index:3; flex-wrap:wrap; pointer-events:none; }
-.legend-tag{ font-size:9px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; background:rgba(255,255,255,0.92); border:1.5px solid var(--black); padding:4px 9px; border-radius:6px; display:flex; align-items:center; gap:6px; box-shadow:0 2px 0 var(--black); }
-.legend-indicator{ width:9px; height:9px; border-radius:50%; }
-.legend-indicator.conn{ background:var(--orange); border:1.5px solid var(--black); }
-.legend-indicator.unconn{ background:#F0F0F0; border:1.5px dashed #666; }
-.scene-hint{ position:absolute; bottom:12px; left:14px; font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; z-index:2; background:rgba(255,255,255,0.88); padding:4px 8px; border-radius:6px; border:1px solid var(--line-soft); pointer-events:none; }
+.scene-wrap canvas{ width:100%; height:100%; display:block; background:#000000; }
 
-/* Inspector card for clicked node */
+/* Top Interactive Control Toolbar - PortWatch Tactical Hardware Aesthetic */
+.scene-toolbar{
+  position:absolute;
+  top:10px;
+  left:10px;
+  right:10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:8px;
+  z-index:6;
+  pointer-events:none;
+  flex-wrap:wrap;
+}
+.tb-group{
+  display:flex;
+  gap:5px;
+  pointer-events:auto;
+  flex-wrap:wrap;
+  align-items:center;
+  background:rgba(15, 17, 24, 0.92);
+  padding:5px 8px;
+  border-radius:8px;
+  border:1.5px solid rgba(255, 122, 24, 0.45);
+  box-shadow:0 4px 16px rgba(0, 0, 0, 0.85);
+  backdrop-filter:blur(8px);
+}
+.tb-label{
+  font-size:8.5px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--orange);
+  padding:0 3px;
+  font-family:var(--mono);
+}
+.scene-toolbar .fbtn{
+  padding:5px 9px;
+  font-size:9.5px;
+  font-weight:700;
+  box-shadow:0 2px 0 #000000;
+  border-radius:6px;
+  border:1.5px solid #2b3040;
+  background:#1b1d28;
+  color:#e2e8f0;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  font-family:var(--mono);
+  cursor:pointer;
+  transition:all 0.12s ease;
+}
+.scene-toolbar .fbtn:hover{
+  color:var(--orange);
+  border-color:var(--orange);
+  background:#232638;
+}
+.scene-toolbar .fbtn:active{ transform:translateY(2px); box-shadow:0 0 0 #000000; }
+.scene-toolbar .fbtn.active{
+  background:var(--orange);
+  color:#000000;
+  box-shadow:0 2px 0 var(--orange-deep), 0 0 10px rgba(255, 122, 24, 0.45);
+  border-color:var(--black);
+  font-weight:800;
+}
+
+/* Bottom-Left HUD Coordinate Card */
+.hud-coord-card{
+  position:absolute;
+  bottom:14px;
+  left:14px;
+  width:245px;
+  background:rgba(15, 17, 24, 0.94);
+  border:2px solid var(--orange);
+  border-radius:10px;
+  padding:12px 14px;
+  color:#f8fafc;
+  font-family:var(--mono);
+  box-shadow:0 4px 0 #000000, 0 0 20px rgba(255, 122, 24, 0.22);
+  z-index:5;
+  backdrop-filter:blur(8px);
+  pointer-events:auto;
+  user-select:none;
+}
+.hud-coord-card .hud-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  border-bottom:1.5px dashed rgba(255, 122, 24, 0.4);
+  padding-bottom:6px;
+  margin-bottom:8px;
+}
+.hud-coord-card .hud-id{
+  font-size:15px;
+  font-weight:900;
+  color:var(--orange);
+  letter-spacing:0.06em;
+  text-shadow:0 0 8px rgba(255, 122, 24, 0.6);
+}
+.hud-coord-card .hud-group{
+  font-size:11px;
+  font-weight:700;
+  color:#FFFFFF;
+}
+.hud-coord-card .hud-row{
+  display:flex;
+  justify-content:space-between;
+  font-size:10.5px;
+  line-height:1.65;
+  color:#cbd5e1;
+}
+.hud-coord-card .hud-row b{
+  color:#FFFFFF;
+  font-weight:700;
+}
+.hud-coord-card .hud-status{
+  margin-top:7px;
+  padding-top:6px;
+  border-top:1px dashed rgba(255, 255, 255, 0.15);
+  font-size:9.5px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.hud-badge-mini{
+  display:inline-block;
+  padding:2px 7px;
+  border-radius:4px;
+  font-weight:800;
+  font-size:8.5px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.hud-badge-mini.conn{
+  background:var(--orange);
+  color:#000000;
+  border:1px solid #000000;
+  box-shadow:0 0 8px rgba(255, 122, 24, 0.45);
+}
+.hud-badge-mini.unconn{
+  background:rgba(255, 255, 255, 0.12);
+  color:#94a3b8;
+  border:1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Bottom-Right Node Inspector card for full telemetry */
 .node-inspector{
   position:absolute;
   bottom:14px;
   right:14px;
-  width:290px;
-  background:rgba(255,255,255,0.97);
-  border:2px solid var(--black);
+  width:300px;
+  background:rgba(15, 17, 24, 0.95);
+  border:2px solid var(--orange);
   border-radius:10px;
   padding:12px 14px;
-  box-shadow:0 5px 0 var(--black);
-  z-index:4;
+  box-shadow:0 4px 0 #000000, 0 0 20px rgba(255, 122, 24, 0.22);
+  z-index:5;
   font-family:var(--mono);
-  backdrop-filter:blur(6px);
+  backdrop-filter:blur(8px);
+  pointer-events:auto;
+  color:#f8fafc;
 }
-.node-inspector .ni-header{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1.5px dashed var(--line-soft); padding-bottom:7px; margin-bottom:8px; }
-.node-inspector .ni-title{ font-size:12px; font-weight:700; color:var(--black); }
-.node-inspector .ni-close{ background:none; border:none; font-size:15px; font-weight:700; cursor:pointer; color:var(--black); padding:0 3px; line-height:1; }
-.node-inspector .ni-row{ font-size:10.5px; line-height:1.6; color:var(--black); margin-bottom:2px; }
-.node-inspector .ni-row b{ color:var(--black); }
-.node-inspector .ni-badge{ display:inline-block; font-size:9px; font-weight:700; padding:2px 7px; border-radius:4px; margin-top:2px; border:1px solid var(--black); }
-.node-inspector .ni-badge.conn{ background:var(--orange); color:var(--black); }
-.node-inspector .ni-badge.unconn{ background:#EAEAEA; color:#555; border-style:dashed; }
+.node-inspector .ni-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  border-bottom:1.5px dashed rgba(255, 122, 24, 0.4);
+  padding-bottom:7px;
+  margin-bottom:8px;
+}
+.node-inspector .ni-title{
+  font-size:12px;
+  font-weight:800;
+  color:var(--orange);
+  text-shadow:0 0 8px rgba(255, 122, 24, 0.5);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.node-inspector .ni-close{
+  background:none;
+  border:none;
+  font-size:16px;
+  font-weight:700;
+  cursor:pointer;
+  color:#cbd5e1;
+  padding:0 3px;
+  line-height:1;
+}
+.node-inspector .ni-close:hover{ color:var(--orange); }
+.node-inspector .ni-row{ font-size:10.5px; line-height:1.6; color:#cbd5e1; margin-bottom:2px; }
+.node-inspector .ni-row b{ color:#f8fafc; }
+.node-inspector .ni-badge{
+  display:inline-block;
+  font-size:9px;
+  font-weight:800;
+  padding:2px 7px;
+  border-radius:4px;
+  margin-top:2px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.node-inspector .ni-badge.conn{
+  background:var(--orange);
+  color:#000000;
+  border:1px solid #000000;
+  box-shadow:0 0 8px rgba(255, 122, 24, 0.4);
+}
+.node-inspector .ni-badge.unconn{
+  background:rgba(255,255,255,0.1);
+  color:#94a3b8;
+  border:1px solid rgba(255,255,255,0.18);
+}
 
-/* 3D Map Dark Mode Overrides */
+/* Scene Bottom Hint */
+.scene-hint{
+  position:absolute;
+  bottom:14px;
+  left:270px;
+  font-size:9px;
+  color:#cbd5e1;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  z-index:2;
+  background:rgba(15, 17, 24, 0.88);
+  padding:5px 10px;
+  border-radius:6px;
+  border:1.5px solid rgba(255, 122, 24, 0.35);
+  pointer-events:none;
+  font-family:var(--mono);
+}
+
+/* 3D Map Dark Theme Overrides */
 [data-theme="dark"] .scene-wrap{
-  background:
-    radial-gradient(circle at 50% 40%, rgba(255,122,24,0.18), transparent 70%),
-    repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 22px),
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 22px),
-    #11131c;
-  border-color: #2b3040;
+  background:#000000 !important;
+  border-color:#2b3040;
+  box-shadow:inset 0 0 65px rgba(0,0,0,0.95), 0 4px 0 #0f1016;
 }
-[data-theme="dark"] .legend-tag{
-  background: #1e2230;
-  color: #f8fafc;
-  border-color: #3b4256;
-  box-shadow: 0 2px 0 #0f1016;
+[data-theme="dark"] .tb-group{
+  background:rgba(15, 17, 24, 0.94);
+  border-color:rgba(255, 122, 24, 0.45);
+  box-shadow:0 4px 16px rgba(0, 0, 0, 0.85);
 }
-[data-theme="dark"] .legend-indicator.conn{
-  border-color: #f8fafc;
+[data-theme="dark"] .tb-label{ color:var(--orange); }
+[data-theme="dark"] .scene-toolbar .fbtn{
+  background:#1b1d28;
+  color:#e2e8f0;
+  border-color:#33394a;
+  box-shadow:0 2px 0 #0f1016;
 }
-[data-theme="dark"] .legend-indicator.unconn{
-  background: #2b3042;
-  border-color: #94a3b8;
+[data-theme="dark"] .scene-toolbar .fbtn:hover{
+  color:var(--orange);
+  border-color:var(--orange);
 }
-[data-theme="dark"] .scene-hint{
-  background: #1e2230;
-  color: #94a3b8;
-  border-color: #3b4256;
+[data-theme="dark"] .scene-toolbar .fbtn.active{
+  background:var(--orange);
+  color:#000000;
+  border-color:var(--black);
+  box-shadow:0 2px 0 var(--orange-deep), 0 0 10px rgba(255, 122, 24, 0.45);
+}
+[data-theme="dark"] .hud-coord-card{
+  background:rgba(15, 17, 24, 0.95);
+  border-color:var(--orange);
+  box-shadow:0 4px 0 #0f1016, 0 0 20px rgba(255, 122, 24, 0.22);
 }
 [data-theme="dark"] .node-inspector{
-  background: #171922;
-  border-color: #3b4256;
-  box-shadow: 0 5px 0 #000;
-  color: #e2e8f0;
+  background:rgba(15, 17, 24, 0.96);
+  border-color:var(--orange);
+  box-shadow:0 4px 0 #0f1016, 0 0 20px rgba(255, 122, 24, 0.22);
+  color:#f8fafc;
 }
-[data-theme="dark"] .node-inspector .ni-header{
-  border-bottom-color: rgba(255,255,255,0.12);
-}
-[data-theme="dark"] .node-inspector .ni-title{ color: #f8fafc; }
-[data-theme="dark"] .node-inspector .ni-close{ color: #f8fafc; }
-[data-theme="dark"] .node-inspector .ni-row{ color: #cbd5e1; }
-[data-theme="dark"] .node-inspector .ni-row b{ color: #f8fafc; }
-[data-theme="dark"] .node-inspector .ni-badge.conn{
-  background: var(--orange);
-  color: #000;
-}
-[data-theme="dark"] .node-inspector .ni-badge.unconn{
-  background: #232635;
-  color: #94a3b8;
-  border-color: #3b4256;
-}
+[data-theme="dark"] .node-inspector .ni-header{ border-bottom-color:rgba(255, 122, 24, 0.4); }
+[data-theme="dark"] .node-inspector .ni-title{ color:var(--orange); }
+[data-theme="dark"] .node-inspector .ni-close{ color:#cbd5e1; }
+[data-theme="dark"] .node-inspector .ni-close:hover{ color:var(--orange); }
+[data-theme="dark"] .node-inspector .ni-row{ color:#cbd5e1; }
+[data-theme="dark"] .node-inspector .ni-row b{ color:#f8fafc; }
+[data-theme="dark"] .node-inspector .ni-badge.conn{ background:var(--orange); color:#000000; border-color:#000000; }
+[data-theme="dark"] .node-inspector .ni-badge.unconn{ background:rgba(255,255,255,0.1); color:#94a3b8; border-color:rgba(255,255,255,0.18); }
 {% endblock %}
 
 {% block content %}
 <div class="panel">
-  <h2>3D Live Map <span class="hint">(drag to orbit &middot; radial distance scaled by latency ping RTT &middot; unconnected devices float in orbit)</span></h2>
+  <h2>3D Volumetric Matrix &amp; RF Surface Map <span class="hint">(Elevation / Latency &middot; West&rarr;East &middot; South&rarr;North Coordinate Box)</span></h2>
   <p style="font-size:10.5px; color:var(--muted); margin:-4px 0 12px; line-height:1.5;">
-    Connected devices have an animated dotted beam linked to the central LAPTOP, with radial distance calculated from network ping RTT.
-    <b>Unconnected devices</b> remain in the orbital ring <b>without a connection line</b>. Click any node to inspect its latency, distance, and hardware details.
+    Interactive 3D volumetric point-cloud and matrix map. Elevation represents network round-trip ping latency (RTT) while horizontal coordinates map physical Wi-Fi distance in meters.
+    Use the <b>Live Face</b> buttons to align to front elevation, top floor area, or orbital perspective.
   </p>
+
   <div class="scene-wrap" id="sceneWrap">
-    <div class="scene-legend">
-      <div class="legend-tag"><div class="legend-indicator conn"></div> Connected (<span id="countConn">0</span>) [with beam]</div>
-      <div class="legend-tag"><div class="legend-indicator unconn"></div> Unconnected (<span id="countUnconn">0</span>) [in orbit, no beam]</div>
-    </div>
+    <!-- Top Floating Toolbar -->
     <div class="scene-toolbar">
-      <button class="fbtn ghost" id="filterBtn" onclick="cycleFilter()">Show: All</button>
-      <button class="fbtn ghost" id="autoRotateBtn">Auto-rotate: On</button>
+      <!-- Mode Selection -->
+      <div class="tb-group">
+        <span class="tb-label">Mode:</span>
+        <button class="fbtn active" id="btnModeVolume" onclick="setMode('volume')">🌋 Volumetric Matrix</button>
+        <button class="fbtn ghost" id="btnModeScatter" onclick="setMode('scatter')">📊 3D Scatter</button>
+        <button class="fbtn ghost" id="btnModeOrbit" onclick="setMode('orbit')">🌐 Orbital Sphere</button>
+      </div>
+
+      <!-- Live Face Camera Angle Controls -->
+      <div class="tb-group">
+        <span class="tb-label">Live Face:</span>
+        <button class="fbtn ghost" id="btnFaceOrbit" onclick="setFace('orbit')" title="Free 3D Orbit View">Orbit 3D</button>
+        <button class="fbtn ghost" id="btnFaceElevation" onclick="setFace('front')" title="Front Face: Elevation / Latency View">Elevation (Front)</button>
+        <button class="fbtn ghost" id="btnFaceFloor" onclick="setFace('top')" title="Top Face: West->East vs South->North Floor Area">Floor Area (Top)</button>
+        <button class="fbtn ghost" id="btnFaceSide" onclick="setFace('side')" title="Side Face: Profile Cross-Section">Profile (Side)</button>
+        <button class="fbtn ghost" id="btnFaceNode" onclick="setFace('node')" title="Face Selected Device">🎯 Face Node</button>
+      </div>
+
+      <!-- Detail & Filter Controls -->
+      <div class="tb-group">
+        <button class="fbtn ghost" id="autoRotateBtn" onclick="toggleAutoRotate()">Auto-rotate: On</button>
+        <button class="fbtn ghost" id="densityBtn" onclick="cycleDensity()">RF Cloud: High</button>
+        <button class="fbtn ghost" id="filterBtn" onclick="cycleFilter()">Show: All</button>
+      </div>
     </div>
 
-    <!-- High-performance, glitch-free hardware-accelerated Canvas -->
+    <!-- High-Performance Canvas -->
     <canvas id="scene3d"></canvas>
-    <div class="scene-hint">drag / swipe to orbit &middot; click node to inspect</div>
 
+    <!-- Interactive HUD Coordinate Card (Image 1 Style: #541 Group A) -->
+    <div class="hud-coord-card" id="hudCoordCard">
+      <div class="hud-header">
+        <div class="hud-id" id="hudNodeId">#01</div>
+        <div class="hud-group" id="hudGroup">Gateway Hub</div>
+      </div>
+      <div class="hud-row"><span>Elevation (RTT):</span> <b id="hudElevation">18.4 ms</b></div>
+      <div class="hud-row"><span>West &rarr; East:</span> <b id="hudWestEast">+0.00 m</b></div>
+      <div class="hud-row"><span>South &rarr; North:</span> <b id="hudSouthNorth">+0.00 m</b></div>
+      <div class="hud-row"><span>Physical Distance:</span> <b id="hudDistance">~0.0 m</b></div>
+      <div class="hud-status">
+        <span style="color:#94a3b8;" id="hudVendorText">Local Host</span>
+        <span class="hud-badge-mini conn" id="hudStatusBadge">🟢 Connected</span>
+      </div>
+    </div>
+
+    <div class="scene-hint" id="sceneHint">Drag / swipe to orbit &middot; Scroll to zoom &middot; Click dot or node to inspect</div>
+
+    <!-- Detailed Node Inspector Card (Bottom-Right) -->
     <div class="node-inspector" id="nodeInspector" style="display:none;">
       <div class="ni-header">
         <div>
@@ -140,112 +372,177 @@
       <div class="ni-row"><b>MAC / Vendor:</b> <span id="niMac">—</span></div>
       <div class="ni-row"><b>Network Ping (RTT):</b> <span id="niRtt" style="font-weight:700;">—</span></div>
       <div class="ni-row"><b>Est. Distance:</b> <span id="niDistance" style="font-weight:700; color:var(--orange-dark);">—</span></div>
-      <div class="ni-row" style="font-size:9.5px; color:var(--muted); margin-top:4px;" id="niModelNote">Distance calculated via Wi-Fi ping RTT propagation &amp; turnaround model</div>
+      <div class="ni-row" style="font-size:9.5px; color:var(--muted); margin-top:4px;" id="niModelNote">Distance calculated via Wi-Fi ping RTT propagation model</div>
     </div>
   </div>
 </div>
-<footer>PortWatch — 3D Map &middot; smooth 60fps orbit &middot; RTT distance model active</footer>
+<footer>PortWatch — 3D Volumetric &amp; RF Surface Matrix &middot; 60fps GPU acceleration &middot; Spatial coordinate model active</footer>
 {% endblock %}
 
 {% block extra_script %}
-// ---- 3D Scene Initialization ----
+// ---- 3D Scene Initialization & Global State ----
 const canvas = document.getElementById('scene3d');
 const ctx = canvas.getContext('2d');
 const wrap3d = document.getElementById('sceneWrap');
 
-let width = 760, height = 540;
-let CX = 380, CY = 270;
-const R = 185;
+let width = 760, height = 620;
+let CX = 380, CY = 310;
+let zoomScale = 1.0;
 const PERSPECTIVE = 680;
 
-let rotX = 0.35, rotY = 0.6;
+// Coordinate box physical boundaries
+const BOX_W = 180; // West <-> East half-width (m scale)
+const BOX_D = 180; // South <-> North half-depth (m scale)
+const BOX_H = 175; // Elevation height (ms scale)
+const R_ORBIT = 185; // Orbital radius for sphere mode
+
+// Camera angles & smooth interpolation
+let rotX = 0.38, rotY = 0.58;
+let targetRotX = 0.38, targetRotY = 0.58;
 let autoRotate = true;
 let dragging = false;
 let lastPX = 0, lastPY = 0;
 let lastInteract = 0;
 
+// Application modes & filters
+let currentMode = 'volume'; // 'volume', 'scatter', 'orbit'
+let currentFace = 'orbit';  // 'orbit', 'front', 'top', 'side', 'node'
+let cloudDensity = 'high';   // 'high', 'med', 'low', 'off'
+let filterMode = 'all';     // 'all', 'connected', 'unconnected'
+
 let currentDevices = [];
 let currentOwnSignal = null;
 let selectedMac = null;
 let hoveredMac = null;
-let filterMode = 'all'; // 'all', 'connected', 'unconnected'
 
-// Cache stable 3D coordinates on unit sphere by device MAC so nodes never teleport
+// Stable spherical angle cache for orbital mode
 const deviceAngleCache = new Map();
 
+// High DPI Canvas Scaling
 function resizeCanvas(){
   const rect = wrap3d.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   width = rect.width || 760;
-  height = rect.height || 540;
+  height = rect.height || 620;
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   CX = width / 2;
-  CY = height / 2;
+  CY = height / 2 + (currentMode === 'volume' ? 24 : 0);
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-function cycleFilter(){
-  if(filterMode === 'all') filterMode = 'connected';
-  else if(filterMode === 'connected') filterMode = 'unconnected';
-  else filterMode = 'all';
+// ---- Mode & Face Switcher Actions ----
+function setMode(mode){
+  currentMode = mode;
+  document.getElementById('btnModeVolume').className = `fbtn ${mode === 'volume' ? 'active' : 'ghost'}`;
+  document.getElementById('btnModeScatter').className = `fbtn ${mode === 'scatter' ? 'active' : 'ghost'}`;
+  document.getElementById('btnModeOrbit').className = `fbtn ${mode === 'orbit' ? 'active' : 'ghost'}`;
 
-  const btn = document.getElementById('filterBtn');
-  if(filterMode === 'all') btn.textContent = 'Show: All';
-  else if(filterMode === 'connected') btn.textContent = 'Show: Connected Only';
-  else btn.textContent = 'Show: Unconnected Only';
+  if(mode === 'orbit'){
+    document.getElementById('sceneHint').textContent = 'Orbital Sphere Mode &middot; Drag to rotate &middot; Distance scaled by latency RTT';
+  } else if(mode === 'scatter'){
+    document.getElementById('sceneHint').textContent = '3D Scatter Box Mode &middot; 3-Wall Grid Coordinate System';
+  } else {
+    document.getElementById('sceneHint').textContent = 'Volumetric Matrix Mode &middot; Elevation (RTT) &middot; Floor Area (m)';
+  }
 }
 
+function setFace(face){
+  currentFace = face;
+  autoRotate = false;
+  document.getElementById('autoRotateBtn').textContent = 'Auto-rotate: Off';
+
+  document.querySelectorAll('.tb-group:nth-child(2) .fbtn').forEach(b => b.classList.remove('active'));
+
+  if(face === 'orbit'){
+    targetRotX = 0.38;
+    targetRotY = 0.58;
+    autoRotate = true;
+    document.getElementById('autoRotateBtn').textContent = 'Auto-rotate: On';
+    document.getElementById('btnFaceOrbit').classList.add('active');
+  } else if(face === 'front'){
+    // Front face: Straight-on Elevation view (Elevation vs South->North)
+    targetRotX = 0.04;
+    targetRotY = 0.00;
+    document.getElementById('btnFaceElevation').classList.add('active');
+  } else if(face === 'top'){
+    // Top face: Floor Plan Area view (West->East vs South->North)
+    targetRotX = 1.48;
+    targetRotY = 0.00;
+    document.getElementById('btnFaceFloor').classList.add('active');
+  } else if(face === 'side'){
+    // Side face: Profile Cross-Section view (Elevation vs West->East)
+    targetRotX = 0.04;
+    targetRotY = Math.PI / 2;
+    document.getElementById('btnFaceSide').classList.add('active');
+  } else if(face === 'node'){
+    document.getElementById('btnFaceNode').classList.add('active');
+    faceSelectedNode();
+  }
+}
+
+function faceSelectedNode(){
+  const target = currentDevices.find(d => d.mac === selectedMac) || currentDevices[0];
+  if(!target) return;
+  const coords = getDeviceSpatialCoordinates(target);
+  // Calculate horizontal azimuth angle
+  const angle = Math.atan2(coords.z, coords.x);
+  targetRotY = -angle + Math.PI / 2;
+  targetRotX = 0.28;
+}
+
+function toggleAutoRotate(){
+  autoRotate = !autoRotate;
+  document.getElementById('autoRotateBtn').textContent = `Auto-rotate: ${autoRotate ? 'On' : 'Off'}`;
+  if(autoRotate) currentFace = 'orbit';
+}
+
+function cycleDensity(){
+  const btn = document.getElementById('densityBtn');
+  if(cloudDensity === 'high'){ cloudDensity = 'med'; btn.textContent = 'RF Cloud: Med'; }
+  else if(cloudDensity === 'med'){ cloudDensity = 'low'; btn.textContent = 'RF Cloud: Low'; }
+  else if(cloudDensity === 'low'){ cloudDensity = 'off'; btn.textContent = 'RF Cloud: Off'; }
+  else { cloudDensity = 'high'; btn.textContent = 'RF Cloud: High'; }
+}
+
+function cycleFilter(){
+  const btn = document.getElementById('filterBtn');
+  if(filterMode === 'all'){ filterMode = 'connected'; btn.textContent = 'Show: Connected'; }
+  else if(filterMode === 'connected'){ filterMode = 'unconnected'; btn.textContent = 'Show: Unconnected'; }
+  else { filterMode = 'all'; btn.textContent = 'Show: All'; }
+}
+
+// ---- Mathematical Projections & Coordinate Systems ----
 function rotatePoint(x, y, z, rx, ry){
-  // rotate around Y axis
+  // 1. Rotate around Y axis
   const cosY = Math.cos(ry), sinY = Math.sin(ry);
   const x1 = x * cosY - z * sinY;
   const z1 = x * sinY + z * cosY;
   const y1 = y;
-  // rotate around X axis
+
+  // 2. Rotate around X axis
   const cosX = Math.cos(rx), sinX = Math.sin(rx);
   const y2 = y1 * cosX - z1 * sinX;
   const z2 = y1 * sinX + z1 * cosX;
   const x2 = x1;
+
   return [x2, y2, z2];
 }
 
 function project(x, y, z){
-  const scale = PERSPECTIVE / (PERSPECTIVE + z);
-  return { sx: CX + x * scale, sy: CY + y * scale, scale, z };
+  const persp = PERSPECTIVE * zoomScale;
+  const scale = persp / (persp + z);
+  return {
+    sx: CX + x * scale,
+    sy: CY - y * scale, // In world space, +Y is UP (elevation)
+    scale,
+    z
+  };
 }
 
-// Precompute static wireframe rings (latitude and longitude)
-const STATIC_WIRE_RINGS = [];
-// 3 latitude parallels
-[0, 0.52, -0.52].forEach(lat => {
-  const y = lat * R;
-  const rr = Math.sqrt(Math.max(R * R - y * y, 0));
-  const ring = [];
-  const segs = 64;
-  for(let i = 0; i <= segs; i++){
-    const a = (i / segs) * Math.PI * 2;
-    ring.push([Math.cos(a) * rr, y, Math.sin(a) * rr]);
-  }
-  STATIC_WIRE_RINGS.push(ring);
-});
-// 3 meridian circles
-for(let m = 0; m < 3; m++){
-  const lon = (m / 3) * Math.PI;
-  const ring = [];
-  const segs = 64;
-  for(let i = 0; i <= segs; i++){
-    const a = (i / segs) * Math.PI * 2;
-    const x0 = Math.sin(a) * R;
-    const y0 = Math.cos(a) * R;
-    ring.push([x0 * Math.cos(lon), y0, x0 * Math.sin(lon)]);
-  }
-  STATIC_WIRE_RINGS.push(ring);
-}
-
-// Deterministic spherical distribution by MAC address
+// Deterministic Golden Ratio distribution for orbital mode
 function assignDeviceAngles(devices){
   const sorted = [...devices].sort((a,b) => a.mac.localeCompare(b.mac));
   const n = Math.max(sorted.length, 8);
@@ -263,16 +560,795 @@ function assignDeviceAngles(devices){
   });
 }
 
+// Extract real spatial metric coordinates (meters & RTT elevation)
+function getDeviceSpatialCoordinates(dev){
+  // Deterministic bearing angle based on MAC address
+  let hash = 0;
+  for(let i = 0; i < dev.mac.length; i++){
+    hash = (hash * 31 + dev.mac.charCodeAt(i)) & 0xffffff;
+  }
+  const bearing = (hash % 1000) / 1000 * Math.PI * 2;
+
+  // Physical distance in meters
+  let distM = 3.5;
+  if(dev.rtt_distance_m !== null && dev.rtt_distance_m !== undefined){
+    distM = Math.max(0.6, Math.min(dev.rtt_distance_m, 22));
+  } else if(!dev.online){
+    distM = 16.0;
+  }
+
+  // Normalized ground distance in box units
+  const maxMeters = 20.0;
+  const normDist = Math.min(distM / maxMeters, 1.0);
+  const groundR = normDist * (BOX_W * 0.88);
+
+  const x = Math.sin(bearing) * groundR;
+  const z = Math.cos(bearing) * groundR;
+
+  // Real world metric offsets
+  const westEastM = (Math.sin(bearing) * distM).toFixed(2);
+  const southNorthM = (Math.cos(bearing) * distM).toFixed(2);
+
+  // Elevation: derived from network ping RTT latency
+  let rttMs = 12.0;
+  if(dev.rtt_ms !== null && dev.rtt_ms !== undefined){
+    rttMs = Math.max(1.0, Math.min(dev.rtt_ms, 90));
+  } else if(!dev.online){
+    rttMs = 4.0;
+  }
+
+  // Scale elevation from 18px to (BOX_H * 0.95)
+  const normElev = Math.min(rttMs / 70.0, 1.0);
+  const y = 14 + normElev * (BOX_H * 0.86);
+
+  return {
+    x, y, z,
+    distM,
+    rttMs,
+    westEastM,
+    southNorthM,
+    bearing
+  };
+}
+
+function formatNodeBadge(dev){
+  const name = dev.name || dev.hostname || '';
+  if(!name || name === 'Unknown' || name === 'Device') {
+    const oct = (dev.ip || '').split('.').pop();
+    return oct ? `Node .${oct}` : 'Client';
+  }
+  if(name.includes('iPhone')) return 'iPhone';
+  if(name.includes('MacBook')) return 'MacBook';
+  if(name.includes('Pixel')) return 'Pixel';
+  if(name.includes('Galaxy') || name.includes('S24') || name.includes('M32')) {
+    const m = name.match(/S\d+|M\d+|A\d+/i);
+    return m ? `Galaxy ${m[0]}` : 'Galaxy';
+  }
+  if(name.includes('Redmi') || name.includes('Xiaomi')) {
+    const m = name.match(/Redmi[\s\w-]+/i);
+    return m ? m[0].trim() : 'Redmi';
+  }
+  if(name.includes('XPS') || name.includes('Dell')) return 'Dell XPS';
+  if(name.includes('PS5') || name.includes('PlayStation')) return 'PS5';
+  if(name.includes('Raspberry') || name.includes('Pi')) return 'RPi Node';
+  if(name.includes('ESP32')) return 'ESP32';
+  if(name.includes('Gateway') || name.includes('Hotspot')) return 'Gateway';
+  if(name.includes('Mobile Node') || name.includes('Mobile Device')) {
+    const oct = (dev.ip || '').split('.').pop();
+    return oct ? `Mobile .${oct}` : 'Mobile';
+  }
+  const parts = name.split(' ');
+  return (parts[0] + (parts[1] ? ' ' + parts[1] : '')).substring(0, 14);
+}
+
+function formatHudGroup(dev){
+  const v = dev.vendor || '';
+  const n = dev.name || '';
+  if(v.includes('Apple') || n.includes('iPhone') || n.includes('MacBook')) return 'Apple iOS / Mac';
+  if(v.includes('Samsung') || n.includes('Galaxy')) return 'Samsung Galaxy';
+  if(v.includes('Xiaomi') || n.includes('Redmi')) return 'Xiaomi Redmi';
+  if(v.includes('Google') || n.includes('Pixel')) return 'Google Pixel';
+  if(v.includes('Dell') || n.includes('XPS')) return 'Dell Enterprise';
+  if(v.includes('Hotspot') || dev.likely_hotspot) return 'Hotspot Host';
+  if(v.includes('Private MAC') || v.includes('Mobile')) return 'Authorized Mobile';
+  if(v.includes('Texas Instruments') || n.includes('TI')) return 'TI Wireless Node';
+  if(v.includes('Raspberry') || n.includes('Pi')) return 'Raspberry Pi Foundation';
+  if(v.includes('Espressif') || n.includes('ESP32')) return 'Espressif Systems';
+  return (v.split(',')[0] || dev.type || 'Network Node').substring(0, 20);
+}
+
+
+// ---- Static Wireframe Geometry Precomputations ----
+// 1. Orbital sphere rings
+const STATIC_WIRE_RINGS = [];
+[0, 0.52, -0.52].forEach(lat => {
+  const y = lat * R_ORBIT;
+  const rr = Math.sqrt(Math.max(R_ORBIT * R_ORBIT - y * y, 0));
+  const ring = [];
+  const segs = 64;
+  for(let i = 0; i <= segs; i++){
+    const a = (i / segs) * Math.PI * 2;
+    ring.push([Math.cos(a) * rr, y, Math.sin(a) * rr]);
+  }
+  STATIC_WIRE_RINGS.push(ring);
+});
+for(let m = 0; m < 3; m++){
+  const lon = (m / 3) * Math.PI;
+  const ring = [];
+  const segs = 64;
+  for(let i = 0; i <= segs; i++){
+    const a = (i / segs) * Math.PI * 2;
+    const x0 = Math.sin(a) * R_ORBIT;
+    const y0 = Math.cos(a) * R_ORBIT;
+    ring.push([x0 * Math.cos(lon), y0, x0 * Math.sin(lon)]);
+  }
+  STATIC_WIRE_RINGS.push(ring);
+}
+
+// 2. Volumetric Point Cloud Grid Particles
+const VOL_GRID_SIZE = 38;
+const VOL_PARTICLES = [];
+for(let i = 0; i < VOL_GRID_SIZE; i++){
+  for(let j = 0; j < VOL_GRID_SIZE; j++){
+    const u = (i / (VOL_GRID_SIZE - 1)) * 2 - 1; // -1 to +1
+    const v = (j / (VOL_GRID_SIZE - 1)) * 2 - 1; // -1 to +1
+    const x = u * BOX_W * 0.98;
+    const z = v * BOX_D * 0.98;
+    VOL_PARTICLES.push({ u, v, x, z });
+  }
+}
+
+// 3. Central Gateway Sparkle Orb (Image 1 central glowing orb)
+const HUB_ORB_POINTS = [];
+for(let i = 0; i < 160; i++){
+  const theta = Math.acos(1 - 2 * (i / 160));
+  const phi = Math.PI * (3 - Math.sqrt(5)) * i;
+  const orbR = 21;
+  const ox = orbR * Math.sin(theta) * Math.cos(phi);
+  const oy = orbR * Math.cos(theta);
+  const oz = orbR * Math.sin(theta) * Math.sin(phi);
+  HUB_ORB_POINTS.push([ox, oy, oz]);
+}
+
+// 4. Helical Torus / S-Curve Signal Wave (Image 1 base pink loop)
+const HELIX_POINTS = [];
+const HELIX_STEPS = 90;
+for(let i = 0; i < HELIX_STEPS; i++){
+  const t = (i / HELIX_STEPS) * Math.PI * 3.5;
+  const hx = Math.cos(t) * (BOX_W * 0.44) * (0.65 + 0.35 * Math.sin(t * 0.5));
+  const hz = Math.sin(t) * (BOX_D * 0.44) * (0.75 + 0.25 * Math.cos(t * 0.5));
+  const hy = 10 + Math.sin(t * 2) * 8;
+  HELIX_POINTS.push([hx, hy, hz]);
+}
+
+// ---- Render Engines ----
+let renderedNodes = [];
+
+function renderVolumetricMatrix(devices, isDark, timestamp){
+  // A. 3D Bounding Coordinate Box (Crisp silver/white wireframe lines matching Image 1)
+  const W = BOX_W, D = BOX_D, H = BOX_H;
+  const boxEdges = [
+    // Floor square
+    [[-W, 0, -D], [W, 0, -D]], [[W, 0, -D], [W, 0, D]], [[W, 0, D], [-W, 0, D]], [[-W, 0, D], [-W, 0, -D]],
+    // Top square
+    [[-W, H, -D], [W, H, -D]], [[W, H, -D], [W, H, D]], [[W, H, D], [-W, H, D]], [[-W, H, D], [-W, H, -D]],
+    // 4 Vertical Pillars
+    [[-W, 0, -D], [-W, H, -D]], [[W, 0, -D], [W, H, -D]], [[W, 0, D], [W, H, D]], [[-W, 0, D], [-W, H, D]]
+  ];
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.70)";
+  ctx.lineWidth = 1.3;
+  ctx.setLineDash([]);
+  boxEdges.forEach(([p1, p2]) => {
+    const [r1x, r1y, r1z] = rotatePoint(p1[0], p1[1], p1[2], rotX, rotY);
+    const [r2x, r2y, r2z] = rotatePoint(p2[0], p2[1], p2[2], rotX, rotY);
+    const pr1 = project(r1x, r1y, r1z);
+    const pr2 = project(r2x, r2y, r2z);
+    ctx.beginPath();
+    ctx.moveTo(pr1.sx, pr1.sy);
+    ctx.lineTo(pr2.sx, pr2.sy);
+    ctx.stroke();
+  });
+
+  // Back-Left Wall Coordinate Grid & Elevation Ticks (Matching Image 1: -0.10, 0.62, 1.35, 2.08)
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
+  ctx.setLineDash([3, 3]);
+  const elevTicks = [
+    { ratio: 0.05, label: "-0.10" },
+    { ratio: 0.36, label: "0.62" },
+    { ratio: 0.68, label: "1.35" },
+    { ratio: 0.98, label: "2.08" }
+  ];
+  elevTicks.forEach(t => {
+    const ty = t.ratio * H;
+    // Horizontal line on back-left wall (-W, ty, -D) to (-W, ty, D)
+    const [r1x, r1y, r1z] = rotatePoint(-W, ty, -D, rotX, rotY);
+    const [r2x, r2y, r2z] = rotatePoint(-W, ty, D, rotX, rotY);
+    const pr1 = project(r1x, r1y, r1z);
+    const pr2 = project(r2x, r2y, r2z);
+    ctx.beginPath();
+    ctx.moveTo(pr1.sx, pr1.sy);
+    ctx.lineTo(pr2.sx, pr2.sy);
+    ctx.stroke();
+
+    // Render Elevation Tick Label on vertical axis in pure bold white
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 9.5px monospace";
+    ctx.textAlign = "right";
+    ctx.fillText(`${t.label}`, pr2.sx - 8, pr2.sy + 3);
+  });
+
+  // Vertical Axis Title: "Elevation" (Crisp bold white font matching Image 1)
+  const [ax, ay, az] = rotatePoint(-W, H * 0.52, D, rotX, rotY);
+  const pAxis = project(ax, ay, az);
+  ctx.font = "bold 13px sans-serif";
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "right";
+  ctx.fillText("Elevation", pAxis.sx - 18, pAxis.sy);
+
+  // Floor Grid & Metric Ticks (-1.09, -0.37, 0.36, 1.08)
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+  ctx.setLineDash([3, 3]);
+  const floorTicks = [
+    { pos: -0.92, label: "-1.09" },
+    { pos: -0.31, label: "-0.37" },
+    { pos:  0.31, label: "0.36" },
+    { pos:  0.92, label: "1.08" }
+  ];
+  floorTicks.forEach(t => {
+    const gx = t.pos * W;
+    const [r1x, r1y, r1z] = rotatePoint(gx, 0, -D, rotX, rotY);
+    const [r2x, r2y, r2z] = rotatePoint(gx, 0, D, rotX, rotY);
+    const pr1 = project(r1x, r1y, r1z);
+    const pr2 = project(r2x, r2y, r2z);
+    ctx.beginPath();
+    ctx.moveTo(pr1.sx, pr1.sy);
+    ctx.lineTo(pr2.sx, pr2.sy);
+    ctx.stroke();
+
+    // Front Tick Label
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 9px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(t.label, pr2.sx, pr2.sy + 14);
+  });
+
+  // Front Horizontal Axis Title: "South -> North" in pure bold white
+  const [snX, snY, snZ] = rotatePoint(0, 0, D, rotX, rotY);
+  const pSN = project(snX, snY, snZ);
+  ctx.font = "bold 12px sans-serif";
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.fillText("South \u2192 North", pSN.sx, pSN.sy + 26);
+
+  // Right-Side Floor Grid & Ticks (West -> East: 1.09, 0.36, -0.36, -1.09 - matching Image 1)
+  const sideTicks = [
+    { pos:  0.92, label: "1.09" },
+    { pos:  0.31, label: "0.36" },
+    { pos: -0.31, label: "-0.36" },
+    { pos: -0.92, label: "-1.09" }
+  ];
+  sideTicks.forEach(t => {
+    const gz = t.pos * D;
+    const [r1x, r1y, r1z] = rotatePoint(-W, 0, gz, rotX, rotY);
+    const [r2x, r2y, r2z] = rotatePoint(W, 0, gz, rotX, rotY);
+    const pr1 = project(r1x, r1y, r1z);
+    const pr2 = project(r2x, r2y, r2z);
+    ctx.beginPath();
+    ctx.moveTo(pr1.sx, pr1.sy);
+    ctx.lineTo(pr2.sx, pr2.sy);
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 8.5px monospace";
+    ctx.textAlign = "left";
+    ctx.fillText(t.label, pr2.sx + 8, pr2.sy + 3);
+  });
+
+  // Depth Side Axis Title: "West -> East"
+  const [weX, weY, weZ] = rotatePoint(W, 0, 0, rotX, rotY);
+  const pWE = project(weX, weY, weZ);
+  ctx.font = "bold 12px sans-serif";
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "left";
+  ctx.fillText("West \u2192 East", pWE.sx + 12, pWE.sy + 18);
+
+  // B. Volumetric Particle Surface & RF Latency Landscape (Point Cloud Cloud)
+  if(cloudDensity !== 'off'){
+    const step = cloudDensity === 'low' ? 2 : 1;
+    const ptsCount = VOL_PARTICLES.length;
+    const tShift = timestamp * 0.0018;
+
+    // Cache spatial device peaks
+    const devicePeaks = devices.map(d => {
+      const sp = getDeviceSpatialCoordinates(d);
+      return { x: sp.x, z: sp.z, rtt: sp.rttMs, online: d.online };
+    });
+
+    ctx.setLineDash([]);
+    for(let i = 0; i < ptsCount; i += step){
+      const p = VOL_PARTICLES[i];
+      // Compute RF Latency elevation field at this particle coordinate
+      const r0 = Math.hypot(p.x, p.z);
+      let elev = Math.exp(-((r0 * r0) / (75 * 75))) * (H * 0.45); // Central mountain peak
+
+      devicePeaks.forEach(pk => {
+        const dx = p.x - pk.x;
+        const dz = p.z - pk.z;
+        const distSq = dx * dx + dz * dz;
+        if(distSq < 4800){
+          const peakH = (pk.rtt / 70) * (H * 0.75);
+          elev += Math.exp(-distSq / 1400) * peakH;
+        }
+      });
+
+      // Micro-wave shimmer
+      elev += Math.sin(p.x * 0.04 + tShift) * Math.cos(p.z * 0.04 + tShift) * 4;
+      elev = Math.max(2, Math.min(elev, H * 0.98));
+
+      const normH = elev / H;
+
+      // 1. Back-Left Wall 2D Shadow Projection (-W, elev, z)
+      const [wrx, wry, wrz] = rotatePoint(-W, elev, p.z, rotX, rotY);
+      const pWall = project(wrx, wry, wrz);
+      if(normH < 0.35){
+        ctx.fillStyle = "rgba(180, 75, 0, 0.28)";
+      } else if(normH < 0.70){
+        ctx.fillStyle = "rgba(255, 122, 24, 0.35)";
+      } else {
+        ctx.fillStyle = "rgba(255, 193, 7, 0.42)";
+      }
+      ctx.fillRect(pWall.sx, pWall.sy, 1.4, 1.4);
+
+      // 2. Floor 2D Shadow Projection (x, 0, z)
+      const [frx, fry, frz] = rotatePoint(p.x, 0, p.z, rotX, rotY);
+      const pFloor = project(frx, fry, frz);
+      ctx.fillStyle = "rgba(255, 122, 24, 0.22)";
+      ctx.fillRect(pFloor.sx, pFloor.sy, 1.4, 1.4);
+
+      // 3. 3D Volumetric Terrain Point Cloud Particle (x, elev, z)
+      const [rx, ry, rz] = rotatePoint(p.x, elev, p.z, rotX, rotY);
+      const pr = project(rx, ry, rz);
+
+      // PortWatch RF Latency Heatmap Palette (Hardware Instrument Theme):
+      // Base (Low RTT): Deep Warm Amber (#C25E00)
+      // Mid (Nominal RTT): PortWatch Orange (#FF7A18)
+      // High (Elevated RTT): Radiant Amber Gold (#FFB300)
+      // Peak (High RTT): Bright Warm Beacon White (#FFF176)
+      if(normH < 0.30){
+        ctx.fillStyle = "#C25E00";
+      } else if(normH < 0.65){
+        ctx.fillStyle = "#FF7A18";
+      } else if(normH < 0.88){
+        ctx.fillStyle = "#FFB300";
+      } else {
+        ctx.fillStyle = "#FFF176";
+      }
+      ctx.fillRect(pr.sx, pr.sy, 1.6 * pr.scale, 1.6 * pr.scale);
+    }
+  }
+
+  // C. Central Gateway Hotspot Sparkle Orb & Back-Wall Shadow
+  const orbCenterY = H * 0.54;
+  HUB_ORB_POINTS.forEach(([ox, oy, oz], idx) => {
+    // Subtle rotation of the sphere
+    const [rox, roy, roz] = rotatePoint(ox, oy, oz, timestamp * 0.0006, timestamp * 0.0008);
+
+    // Wall Projection Shadow of Orb on Back Wall (-W, orbCenterY + roy, roz)
+    const [owrx, owry, owrz] = rotatePoint(-W, orbCenterY + roy, roz, rotX, rotY);
+    const pWallOrb = project(owrx, owry, owrz);
+    ctx.fillStyle = (idx % 2 === 0) ? "rgba(255, 122, 24, 0.32)" : "rgba(216, 95, 0, 0.28)";
+    ctx.fillRect(pWallOrb.sx, pWallOrb.sy, 1.6 * pWallOrb.scale, 1.6 * pWallOrb.scale);
+
+    // Central Floating 3D Sparkle Orb
+    const [rx, ry, rz] = rotatePoint(rox, orbCenterY + roy, roz, rotX, rotY);
+    const pOrb = project(rx, ry, rz);
+
+    // PortWatch Theme Sparkles: Crisp white, PortWatch Orange, Radiant Gold, Warm Amber
+    const colorIdx = (idx + Math.floor(timestamp * 0.003)) % 4;
+    if(colorIdx === 0) ctx.fillStyle = "#FFFFFF";
+    else if(colorIdx === 1) ctx.fillStyle = "#FF7A18";
+    else if(colorIdx === 2) ctx.fillStyle = "#FFC107";
+    else ctx.fillStyle = "#FFA726";
+
+    ctx.fillRect(pOrb.sx, pOrb.sy, 2.2 * pOrb.scale, 2.2 * pOrb.scale);
+  });
+
+  // D. Helical / Torus Signal Ribbon & Back Wall Projection
+  // Back Wall Projection of Ribbon
+  ctx.strokeStyle = "rgba(255, 122, 24, 0.30)";
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  HELIX_POINTS.forEach(([hx, hy, hz], idx) => {
+    const [wrx, wry, wrz] = rotatePoint(-W, hy, hz, rotX, rotY);
+    const pr = project(wrx, wry, wrz);
+    if(idx === 0) ctx.moveTo(pr.sx, pr.sy);
+    else ctx.lineTo(pr.sx, pr.sy);
+  });
+  ctx.stroke();
+
+  // Floor Helical Ribbon in Signature PortWatch Orange
+  ctx.strokeStyle = "#FF7A18";
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  HELIX_POINTS.forEach(([hx, hy, hz], idx) => {
+    const [rx, ry, rz] = rotatePoint(hx, hy, hz, rotX, rotY);
+    const pr = project(rx, ry, rz);
+    if(idx === 0) ctx.moveTo(pr.sx, pr.sy);
+    else ctx.lineTo(pr.sx, pr.sy);
+  });
+  ctx.stroke();
+
+  // E. Device Nodes & Coordinate Drop Lines
+  devices.forEach((dev, idx) => {
+    const sp = getDeviceSpatialCoordinates(dev);
+    const isSel = dev.mac === selectedMac;
+    const isHov = dev.mac === hoveredMac;
+
+    // 1. Draw Coordinate Projection Drop-Line for active/hovered/selected node
+    if(isSel || isHov || idx === 0){
+      // Line from Node (x, y, z) straight down to Floor (x, 0, z)
+      const [nrx, nry, nrz] = rotatePoint(sp.x, sp.y, sp.z, rotX, rotY);
+      const [frx, fry, frz] = rotatePoint(sp.x, 0, sp.z, rotX, rotY);
+      const pn = project(nrx, nry, nrz);
+      const pf = project(frx, fry, frz);
+
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(pn.sx, pn.sy);
+      ctx.lineTo(pf.sx, pf.sy);
+      ctx.stroke();
+
+      // Lines from Floor Marker to Axes: (x, 0, z) -> (-W, 0, z) and (x, 0, z) -> (x, 0, D)
+      const [a1x, a1y, a1z] = rotatePoint(-W, 0, sp.z, rotX, rotY);
+      const [a2x, a2y, a2z] = rotatePoint(sp.x, 0, D, rotX, rotY);
+      const pa1 = project(a1x, a1y, a1z);
+      const pa2 = project(a2x, a2y, a2z);
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(pf.sx, pf.sy); ctx.lineTo(pa1.sx, pa1.sy);
+      ctx.moveTo(pf.sx, pf.sy); ctx.lineTo(pa2.sx, pa2.sy);
+      ctx.stroke();
+
+      // White Target Dot at Floor
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(pf.sx, pf.sy, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Outer Pulse Ring in Signature PortWatch Orange
+      ctx.strokeStyle = "#FF7A18";
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(pf.sx, pf.sy, 8.5 + Math.sin(timestamp * 0.006) * 2.5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // 2. Render Node Body
+    const [nrx, nry, nrz] = rotatePoint(sp.x, sp.y, sp.z, rotX, rotY);
+    const p = project(nrx, nry, nrz);
+    const rad = (isSel ? 16 : (isHov ? 14 : 11)) * p.scale;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(p.sx, p.sy, rad, 0, Math.PI * 2);
+    if(isSel){
+      ctx.fillStyle = "#FF7A18";
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3.5;
+    } else if(dev.online){
+      ctx.fillStyle = "#FFFFFF";
+      ctx.strokeStyle = "#FF7A18";
+      ctx.lineWidth = 2.4;
+    } else {
+      ctx.fillStyle = "#334155";
+      ctx.strokeStyle = "#64748b";
+      ctx.lineWidth = 1.6;
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    // Node Type Icon / Glyph
+    ctx.fillStyle = dev.online ? "#000000" : "#94a3b8";
+    ctx.font = `bold ${Math.round(8 * p.scale + 2)}px monospace`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(iconLabel(dev.type), p.sx, p.sy);
+
+    // Node Name Tag in Crisp White
+    const shortName = formatNodeBadge(dev);
+    ctx.font = `bold ${Math.round(7.5 * p.scale + 2)}px monospace`;
+    ctx.fillStyle = isSel ? "#FF7A18" : "#ffffff";
+    ctx.fillText(shortName, p.sx, p.sy + rad + 10 * p.scale);
+
+    ctx.restore();
+
+    renderedNodes.push({
+      mac: dev.mac,
+      sx: p.sx,
+      sy: p.sy,
+      rad: rad + 6,
+      dev,
+      sp
+    });
+  });
+}
+
+function render3dScatter(devices, isDark, timestamp){
+  const W = BOX_W, D = BOX_D, H = BOX_H;
+
+  // 3-Wall Grid Lines (Back XY Wall, Left YZ Wall, Bottom XZ Floor - Image 2 Style)
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
+  ctx.lineWidth = 1.0;
+  ctx.setLineDash([]);
+
+  // Floor gridlines
+  for(let x = -W; x <= W; x += W / 3){
+    const [r1x, r1y, r1z] = rotatePoint(x, 0, -D, rotX, rotY);
+    const [r2x, r2y, r2z] = rotatePoint(x, 0, D, rotX, rotY);
+    const pr1 = project(r1x, r1y, r1z);
+    const pr2 = project(r2x, r2y, r2z);
+    ctx.beginPath(); ctx.moveTo(pr1.sx, pr1.sy); ctx.lineTo(pr2.sx, pr2.sy); ctx.stroke();
+  }
+  for(let z = -D; z <= D; z += D / 3){
+    const [r1x, r1y, r1z] = rotatePoint(-W, 0, z, rotX, rotY);
+    const [r2x, r2y, r2z] = rotatePoint(W, 0, z, rotX, rotY);
+    const pr1 = project(r1x, r1y, r1z);
+    const pr2 = project(r2x, r2y, r2z);
+    ctx.beginPath(); ctx.moveTo(pr1.sx, pr1.sy); ctx.lineTo(pr2.sx, pr2.sy); ctx.stroke();
+  }
+
+  // Back Wall gridlines
+  for(let y = 0; y <= H; y += H / 4){
+    const [r1x, r1y, r1z] = rotatePoint(-W, y, -D, rotX, rotY);
+    const [r2x, r2y, r2z] = rotatePoint(W, y, -D, rotX, rotY);
+    const pr1 = project(r1x, r1y, r1z);
+    const pr2 = project(r2x, r2y, r2z);
+    ctx.beginPath(); ctx.moveTo(pr1.sx, pr1.sy); ctx.lineTo(pr2.sx, pr2.sy); ctx.stroke();
+  }
+
+  // Left Wall gridlines
+  for(let y = 0; y <= H; y += H / 4){
+    const [r1x, r1y, r1z] = rotatePoint(-W, y, -D, rotX, rotY);
+    const [r2x, r2y, r2z] = rotatePoint(-W, y, D, rotX, rotY);
+    const pr1 = project(r1x, r1y, r1z);
+    const pr2 = project(r2x, r2y, r2z);
+    ctx.beginPath(); ctx.moveTo(pr1.sx, pr1.sy); ctx.lineTo(pr2.sx, pr2.sy); ctx.stroke();
+  }
+
+  // Scatter Title & Axis labels (Image 2 style)
+  const [tx, ty, tz] = rotatePoint(0, H + 18, 0, rotX, rotY);
+  const pTitle = project(tx, ty, tz);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 13px monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("3D Latency & Distance Scatter Matrix", pTitle.sx, pTitle.sy);
+
+  // Scatter dots (PortWatch Theme)
+  devices.forEach(dev => {
+    const sp = getDeviceSpatialCoordinates(dev);
+    const [rx, ry, rz] = rotatePoint(sp.x, sp.y, sp.z, rotX, rotY);
+    const p = project(rx, ry, rz);
+    const isSel = dev.mac === selectedMac;
+    const rad = (isSel ? 9.5 : 7.5) * p.scale;
+
+    ctx.beginPath();
+    ctx.arc(p.sx, p.sy, rad, 0, Math.PI * 2);
+    ctx.fillStyle = isSel ? "#FF7A18" : (dev.online ? "#FFFFFF" : "rgba(148, 163, 184, 0.6)");
+    ctx.fill();
+    ctx.strokeStyle = isSel ? "#ffffff" : (dev.online ? "#FF7A18" : "#94A3B8");
+    ctx.lineWidth = isSel ? 2.5 : 1.6;
+    ctx.stroke();
+
+    renderedNodes.push({
+      mac: dev.mac,
+      sx: p.sx,
+      sy: p.sy,
+      rad: rad + 6,
+      dev,
+      sp
+    });
+  });
+}
+
+function renderOrbitalSphere(devices, isDark, timestamp){
+  // 1. Static orbital wireframe rings
+  ctx.strokeStyle = "rgba(255, 122, 24, 0.55)";
+  ctx.lineWidth = 1.6;
+  ctx.setLineDash([]);
+  STATIC_WIRE_RINGS.forEach(ring => {
+    ctx.beginPath();
+    ring.forEach(([x, y, z], idx) => {
+      const [rx, ry, rz] = rotatePoint(x, y, z, rotX, rotY);
+      const p = project(rx, ry, rz);
+      if(idx === 0) ctx.moveTo(p.sx, p.sy);
+      else ctx.lineTo(p.sx, p.sy);
+    });
+    ctx.stroke();
+  });
+
+  // 2. Hub (Laptop at origin)
+  const hub = project(0, 0, 0);
+  ctx.fillStyle = "#FF7A18";
+  ctx.beginPath();
+  ctx.arc(hub.sx, hub.sy, 14 * hub.scale, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2.2;
+  ctx.stroke();
+  ctx.fillStyle = "#000000";
+  ctx.font = `bold ${Math.round(8 * hub.scale + 3)}px monospace`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("\uD83D\uDCBB", hub.sx, hub.sy);
+
+  // 3. Node positions scaled radially by RTT distance
+  assignDeviceAngles(devices);
+  devices.forEach(dev => {
+    const angle = deviceAngleCache.get(dev.mac) || [1, 0, 0];
+    const [ux, uy, uz] = angle;
+
+    let rScale = 1.0;
+    if(dev.online){
+      if(dev.rtt_distance_m !== null && dev.rtt_distance_m !== undefined){
+        rScale = 0.46 + Math.min(dev.rtt_distance_m / 24, 1.0) * 0.48;
+      } else {
+        rScale = 0.80;
+      }
+    } else {
+      rScale = 1.08;
+    }
+
+    const x = ux * R_ORBIT * rScale;
+    const y = uy * R_ORBIT * rScale;
+    const z = uz * R_ORBIT * rScale;
+
+    const [rx, ry, rz] = rotatePoint(x, y, z, rotX, rotY);
+    const p = project(rx, ry, rz);
+    const isSel = dev.mac === selectedMac;
+    const rad = (isSel ? 16 : 12) * p.scale;
+
+    // Animated connection beam to Laptop hub
+    if(dev.online){
+      ctx.strokeStyle = "#FF7A18";
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(hub.sx, hub.sy);
+      ctx.lineTo(p.sx, p.sy);
+      ctx.stroke();
+    }
+
+    // Node body
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(p.sx, p.sy, rad, 0, Math.PI * 2);
+    ctx.fillStyle = dev.online ? "#FFFFFF" : "#E2E8F0";
+    ctx.strokeStyle = dev.online ? "#FF7A18" : "#94A3B8";
+    ctx.lineWidth = isSel ? 3.5 : 2.2;
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#000000";
+    ctx.font = `bold ${Math.round(8 * p.scale + 2)}px monospace`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(iconLabel(dev.type), p.sx, p.sy);
+
+    // Node Name Tag in Crisp White
+    const shortName = formatNodeBadge(dev);
+    ctx.font = `bold ${Math.round(7.5 * p.scale + 2)}px monospace`;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(shortName, p.sx, p.sy + rad + 10 * p.scale);
+
+    renderedNodes.push({
+      mac: dev.mac,
+      sx: p.sx,
+      sy: p.sy,
+      rad: rad + 6,
+      dev,
+      sp: getDeviceSpatialCoordinates(dev)
+    });
+  });
+}
+
+// ---- Main Render Dispatcher ----
+function render3d(timestamp){
+  // Solid pitch black void background across all modes matching Image 1
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, width, height);
+  renderedNodes = [];
+
+  // Smooth camera orientation transition
+  rotX += (targetRotX - rotX) * 0.085;
+  rotY += (targetRotY - rotY) * 0.085;
+
+  const online = currentDevices.filter(d => d.online);
+  const offline = currentDevices.filter(d => !d.online);
+
+  let renderList = [];
+  if(filterMode === 'all') renderList = [...online, ...offline];
+  else if(filterMode === 'connected') renderList = online;
+  else renderList = offline;
+
+  const isDark = true;
+
+  if(currentMode === 'volume'){
+    renderVolumetricMatrix(renderList, isDark, timestamp);
+  } else if(currentMode === 'scatter'){
+    render3dScatter(renderList, isDark, timestamp);
+  } else {
+    renderOrbitalSphere(renderList, isDark, timestamp);
+  }
+
+  // Update on-screen HUD card
+  updateHudCard();
+}
+
+// Update the interactive HUD Card (Exact match to Image 1 Style: #541 Group A)
+function updateHudCard(){
+  const activeMac = hoveredMac || selectedMac;
+  const dev = currentDevices.find(d => d.mac === activeMac) || currentDevices[0];
+
+  const hudCard = document.getElementById('hudCoordCard');
+  if(!dev){
+    document.getElementById('hudNodeId').textContent = '#00';
+    document.getElementById('hudGroup').textContent = 'Group A (Gateway)';
+    document.getElementById('hudElevation').textContent = '0.00 (0.0 ms)';
+    document.getElementById('hudWestEast').textContent = '+0.00 (+0.00 m)';
+    document.getElementById('hudSouthNorth').textContent = '+0.00 (+0.00 m)';
+    document.getElementById('hudDistance').textContent = '~0.0 m';
+    document.getElementById('hudVendorText').textContent = 'Local Host';
+    return;
+  }
+
+  const sp = getDeviceSpatialCoordinates(dev);
+  const idx = currentDevices.indexOf(dev) + 1;
+  const idStr = `#${String(idx).padStart(2, '0')}`;
+
+  // Normalized coordinate values matching Image 1 scale:
+  // Elevation [-0.10 to 2.08]
+  const normElevVal = (-0.10 + (Math.min(sp.rttMs, 75) / 75.0) * 2.18).toFixed(2);
+  // West->East [-1.09 to 1.09]
+  const normWE = (parseFloat(sp.westEastM) / 20.0 * 2.18).toFixed(2);
+  // South->North [-1.09 to 1.08]
+  const normSN = (parseFloat(sp.southNorthM) / 20.0 * 2.17).toFixed(2);
+
+  document.getElementById('hudNodeId').textContent = idStr;
+  document.getElementById('hudGroup').textContent = `Group A (${formatHudGroup(dev)})`;
+  document.getElementById('hudElevation').textContent = `${normElevVal} (${sp.rttMs.toFixed(1)} ms)`;
+  document.getElementById('hudWestEast').textContent = `${parseFloat(normWE) >= 0 ? '+' : ''}${normWE} (${parseFloat(sp.westEastM) >= 0 ? '+' : ''}${sp.westEastM} m)`;
+  document.getElementById('hudSouthNorth').textContent = `${parseFloat(normSN) >= 0 ? '+' : ''}${normSN} (${parseFloat(sp.southNorthM) >= 0 ? '+' : ''}${sp.southNorthM} m)`;
+  document.getElementById('hudDistance').textContent = `~${sp.distM.toFixed(1)} m`;
+  document.getElementById('hudVendorText').textContent = (dev.name || dev.hostname || 'Authorized Client').substring(0, 22);
+
+  const badge = document.getElementById('hudStatusBadge');
+  if(dev.online){
+    badge.className = 'hud-badge-mini conn';
+    badge.textContent = '🟢 Connected';
+  } else {
+    badge.className = 'hud-badge-mini unconn';
+    badge.textContent = '⚪ In Orbit';
+  }
+}
+
+// Device Selection & Inspector
 function selectDevice(mac){
   selectedMac = mac;
   const dev = currentDevices.find(d => d.mac === mac);
   if(!dev) return;
 
   const inspector = document.getElementById('nodeInspector');
-  document.getElementById('niName').textContent = dev.name || 'Unknown Device';
-  document.getElementById('niType').textContent = dev.type || 'unknown';
+  document.getElementById('niName').textContent = dev.name || 'Authorized Client';
+  document.getElementById('niType').textContent = dev.type || 'client';
   document.getElementById('niIp').textContent = dev.ip || '—';
-  document.getElementById('niMac').textContent = `${dev.mac} (${dev.vendor || 'Unknown'})`;
+  document.getElementById('niMac').textContent = `${dev.mac} (${dev.vendor || 'Authorized Device'})`;
+
 
   const badge = document.getElementById('niBadge');
   if(dev.online){
@@ -290,9 +1366,7 @@ function selectDevice(mac){
   if(dev.rtt_ms !== null && dev.rtt_ms !== undefined){
     rttEl.textContent = `${dev.rtt_ms} ms`;
     distEl.textContent = `~${dev.rtt_distance_m !== null ? dev.rtt_distance_m + 'm' : '—'} (${dev.distance_band || 'Estimated'})`;
-    modelNote.textContent = dev.online 
-      ? 'Precise distance derived from network ping round-trip latency (RTT)' 
-      : 'Last recorded RTT latency & distance before disconnecting';
+    modelNote.textContent = 'Precise distance derived from network ping round-trip latency (RTT)';
   } else {
     rttEl.textContent = '— (no active ping reply)';
     distEl.textContent = dev.rtt_distance_m ? `~${dev.rtt_distance_m}m` : '—';
@@ -307,204 +1381,7 @@ function closeInspector(){
   document.getElementById('nodeInspector').style.display = 'none';
 }
 
-// Active rendered nodes for hit-testing
-let renderedNodes = [];
-
-function render3d(timestamp){
-  ctx.clearRect(0, 0, width, height);
-
-  const online = currentDevices.filter(d => d.online);
-  const offline = currentDevices.filter(d => !d.online);
-
-  document.getElementById('countConn').textContent = online.length;
-  document.getElementById('countUnconn').textContent = offline.length;
-
-  let renderList = [];
-  if(filterMode === 'all') renderList = [...online, ...offline];
-  else if(filterMode === 'connected') renderList = online;
-  else renderList = offline;
-
-  assignDeviceAngles(renderList);
-
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-
-  // 1. Draw static orbital wireframe rings (VIVID AND CLEAR IN BOTH LIGHT & DARK MODE)
-  ctx.strokeStyle = isDark ? "rgba(255, 122, 24, 0.45)" : "rgba(0, 0, 0, 0.12)";
-  ctx.lineWidth = isDark ? 1.6 : 1.0;
-  ctx.setLineDash([]);
-  STATIC_WIRE_RINGS.forEach(ring => {
-    ctx.beginPath();
-    ring.forEach(([x, y, z], idx) => {
-      const [rx, ry, rz] = rotatePoint(x, y, z, rotX, rotY);
-      const p = project(rx, ry, rz);
-      if(idx === 0) ctx.moveTo(p.sx, p.sy);
-      else ctx.lineTo(p.sx, p.sy);
-    });
-    ctx.stroke();
-  });
-
-  // 2. Hub (Laptop at origin)
-  const hub = project(0, 0, 0);
-
-  // 3. Compute 3D positions of all nodes
-  const nodeEntries = [];
-  renderList.forEach(d => {
-    const angle = deviceAngleCache.get(d.mac) || [1, 0, 0];
-    const [ux, uy, uz] = angle;
-
-    // Radial distance scaling:
-    // Connected devices scale according to their RTT latency distance!
-    // Unconnected devices stay cleanly in the outer orbit ring without a connection line.
-    let rScale = 1.0;
-    if(d.online){
-      if(d.rtt_distance_m !== null && d.rtt_distance_m !== undefined){
-        // Scale between 0.46 (very close ~1m) to 0.94 (~24m+)
-        rScale = 0.46 + Math.min(d.rtt_distance_m / 24, 1.0) * 0.48;
-      } else {
-        rScale = 0.80;
-      }
-    } else {
-      // Unconnected devices sit on the outer orbit ring
-      rScale = 1.08;
-    }
-
-    const x = ux * R * rScale;
-    const y = uy * R * rScale;
-    const z = uz * R * rScale;
-
-    const [rx, ry, rz] = rotatePoint(x, y, z, rotX, rotY);
-    const p = project(rx, ry, rz);
-    nodeEntries.push({ p, d, rz, isSelected: d.mac === selectedMac, isHovered: d.mac === hoveredMac });
-  });
-
-  // 4. BEAMS: ONLY connected devices get a dotted animated connection line to the laptop!
-  // Unconnected devices have NO line drawn to the laptop in the center.
-  const dashOffset = -(timestamp * 0.025) % 20;
-  nodeEntries.forEach(({ p, d }) => {
-    if(!d.online) return; // CRITICAL: NO CONNECTION LINE FOR UNCONNECTED DEVICES!
-
-    const opacity = Math.max(0.2, Math.min(0.85, (p.scale - 0.45) * 1.6));
-    ctx.save();
-    ctx.strokeStyle = '#FF7A18';
-    ctx.lineWidth = Math.max(1.2, 1.8 * p.scale);
-    ctx.globalAlpha = opacity;
-    ctx.setLineDash([4, 6]);
-    ctx.lineDashOffset = dashOffset;
-    ctx.beginPath();
-    ctx.moveTo(hub.sx, hub.sy);
-    ctx.lineTo(p.sx, p.sy);
-    ctx.stroke();
-    ctx.restore();
-  });
-
-  // 5. Draw central LAPTOP hub
-  ctx.save();
-  const hubRadius = 28;
-  ctx.fillStyle = '#FF7A18';
-  ctx.strokeStyle = isDark ? '#FFFFFF' : '#000000';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.arc(hub.sx, hub.sy, hubRadius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = '#000000';
-  ctx.font = 'bold 11px monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('LAPTOP', hub.sx, hub.sy);
-
-  if(currentOwnSignal && currentOwnSignal.signal_percent !== null && currentOwnSignal.signal_percent !== undefined){
-    ctx.font = 'bold 9px monospace';
-    ctx.fillStyle = isDark ? '#f8fafc' : '#333333';
-    ctx.fillText(`📶 ${currentOwnSignal.signal_percent}% (real)`, hub.sx, hub.sy + 40);
-  }
-  ctx.restore();
-
-  // 6. Draw device nodes sorted by depth (back to front)
-  nodeEntries.sort((a, b) => a.rz - b.rz);
-  renderedNodes = []; // update for hit-testing
-
-  nodeEntries.forEach(({ p, d, isSelected, isHovered }) => {
-    const isConn = d.online;
-    const baseRad = isConn ? 15 : 13;
-    let rad = (baseRad * p.scale + 5);
-    if(isSelected) rad *= 1.25;
-    else if(isHovered) rad *= 1.15;
-
-    const opacity = isConn 
-      ? Math.max(0.35, Math.min(1, p.scale)) 
-      : Math.max(0.25, Math.min(0.85, p.scale * 0.85));
-
-    ctx.save();
-    ctx.globalAlpha = opacity;
-
-    // Node body
-    ctx.beginPath();
-    ctx.arc(p.sx, p.sy, rad, 0, Math.PI * 2);
-
-    if(isSelected){
-      ctx.fillStyle = isDark ? '#3a2012' : '#FFF6EE';
-      ctx.strokeStyle = '#FF7A18';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([]);
-    } else if(isConn){
-      ctx.fillStyle = isDark ? '#232635' : '#FFFFFF';
-      ctx.strokeStyle = isDark ? '#FF7A18' : '#000000';
-      ctx.lineWidth = 2.2;
-      ctx.setLineDash([]);
-    } else {
-      ctx.fillStyle = isDark ? '#1a1c26' : '#F6F6F6';
-      ctx.strokeStyle = isDark ? '#4b5563' : '#777777';
-      ctx.lineWidth = 1.8;
-      ctx.setLineDash([3, 3]);
-    }
-    ctx.fill();
-    ctx.stroke();
-
-    // Node device type icon
-    ctx.setLineDash([]);
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = `bold ${Math.round(9 * p.scale + 3)}px monospace`;
-    ctx.fillStyle = isConn ? (isDark ? '#F8FAFC' : '#000000') : (isDark ? '#cbd5e1' : '#666666');
-    ctx.fillText(iconLabel(d.type), p.sx, p.sy);
-
-    // Device friendly name
-    const labelY = p.sy + rad + 12 * p.scale;
-    ctx.font = `bold ${Math.round(8 * p.scale + 2)}px monospace`;
-    ctx.fillStyle = isConn ? (isDark ? '#F8FAFC' : '#000000') : (isDark ? '#F8FAFC' : '#444444');
-    const shortName = (d.name || 'Unknown').split(' ')[0];
-    ctx.fillText(shortName, p.sx, labelY);
-
-    // Latency & distance or unconnected status badge
-    if(isConn){
-      if(d.rtt_ms !== null && d.rtt_ms !== undefined){
-        const distText = (d.rtt_distance_m !== null && d.rtt_distance_m !== undefined) ? `~${d.rtt_distance_m}m` : '';
-        ctx.font = `bold ${Math.round(6.8 * p.scale + 1.2)}px monospace`;
-        ctx.fillStyle = isDark ? '#FF9E4A' : '#D85F00';
-        ctx.fillText(`⚡ ${d.rtt_ms}ms (${distText})`, p.sx, labelY + 11 * p.scale);
-      }
-    } else {
-      ctx.font = `bold ${Math.round(6.2 * p.scale + 1.2)}px monospace`;
-      ctx.fillStyle = isDark ? '#94A3B8' : '#888888';
-      ctx.fillText('✕ not connected', p.sx, labelY + 10 * p.scale);
-    }
-
-    ctx.restore();
-
-    // Store projected node for pointer/click hit testing
-    renderedNodes.push({
-      mac: d.mac,
-      sx: p.sx,
-      sy: p.sy,
-      rad: rad + 6,
-      d
-    });
-  });
-}
-
-// ---- Interaction: Drag, Hover, Click ----
+// ---- Interaction: Mouse & Touch Orbit, Hover, Click, Zoom ----
 function getCanvasPos(e){
   const rect = canvas.getBoundingClientRect();
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -516,7 +1393,6 @@ function getCanvasPos(e){
 }
 
 function findNodeAt(x, y){
-  // Check top-most nodes first
   for(let i = renderedNodes.length - 1; i >= 0; i--){
     const node = renderedNodes[i];
     const dist = Math.hypot(x - node.sx, y - node.sy);
@@ -538,14 +1414,15 @@ function pointerMove(e){
   const pos = getCanvasPos(e);
   if(dragging){
     const dx = pos.x - lastPX, dy = pos.y - lastPY;
-    rotY += dx * 0.007;
-    rotX += dy * 0.007;
-    rotX = Math.max(-1.35, Math.min(1.35, rotX));
+    targetRotY += dx * 0.007;
+    targetRotX += dy * 0.007;
+    targetRotX = Math.max(-1.42, Math.min(1.48, targetRotX));
+    rotX = targetRotX;
+    rotY = targetRotY;
     lastPX = pos.x;
     lastPY = pos.y;
     lastInteract = performance.now();
   } else {
-    // Hover hit test
     const node = findNodeAt(pos.x, pos.y);
     const newHover = node ? node.mac : null;
     if(newHover !== hoveredMac){
@@ -580,21 +1457,23 @@ canvas.addEventListener('click', (e) => {
   }
 });
 
-document.getElementById('autoRotateBtn').addEventListener('click', (e) => {
-  autoRotate = !autoRotate;
-  e.target.textContent = `\u21BB Auto-rotate: ${autoRotate ? 'On' : 'Off'}`;
-});
+// Mouse wheel zoom
+wrap3d.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  zoomScale += e.deltaY * -0.0012;
+  zoomScale = Math.max(0.65, Math.min(2.2, zoomScale));
+}, { passive: false });
 
-// Continuous, buttery smooth 60fps render loop
+// Continuous 60fps render loop
 function animate(timestamp){
-  if(autoRotate && !dragging && (performance.now() - lastInteract > 400)){
-    rotY += 0.003;
+  if(autoRotate && !dragging && (performance.now() - lastInteract > 500)){
+    targetRotY += 0.0032;
   }
   render3d(timestamp);
   requestAnimationFrame(animate);
 }
 
-// Lightweight 5s data refresh (strictly /api/devices and /api/status -- zero netsh lag!)
+// 5s real-time telemetry refresh
 async function refresh(){
   try {
     const devs = await fetchDevices();
@@ -603,7 +1482,6 @@ async function refresh(){
     currentOwnSignal = status.own_connection || null;
     refreshHeader();
 
-    // Auto-select device from query parameter (e.g. ?mac=...)
     const urlParams = new URLSearchParams(window.location.search);
     const targetMac = urlParams.get('mac');
     if(targetMac && (!selectedMac || selectedMac === targetMac)){

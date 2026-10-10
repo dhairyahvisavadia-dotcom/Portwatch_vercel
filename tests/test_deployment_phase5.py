@@ -10,8 +10,6 @@ import unittest
 from unittest.mock import patch
 
 import auth_db
-import config
-import db
 import scanner_service
 from app import create_app
 from config import TestingConfig

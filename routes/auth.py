@@ -30,7 +30,7 @@ MAC_REGEX = re.compile(r"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$")
 
 def is_valid_mac(mac: str) -> bool:
     """Validates that a MAC address has standard 6-octet hexadecimal format."""
-    return bool(mac and MAC_REGEX.match(str(mac).strip()))
+    return bool(mac and MAC_REGEX.match(mac.strip()))
 
 
 def get_safe_redirect(target_url: str, default: str = "dashboard") -> str:

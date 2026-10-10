@@ -15,14 +15,13 @@ Tests:
 import os
 import sys
 import tempfile
-import time
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import app as flask_app
-import auth_db
-import db
+import app as flask_app  # noqa: E402
+import auth_db  # noqa: E402
+import db  # noqa: E402
 
 
 class TestSecurityHardening(unittest.TestCase):

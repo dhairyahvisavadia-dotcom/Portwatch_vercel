@@ -86,7 +86,10 @@ function renderLive(list){
       ? `${n.distance_band}<br><span class="mono dim" style="font-size:9.5px;">${n.dbm} dBm est.</span>`
       : '—';
     tr.innerHTML = `
-      <td><div class="nearby-ssid">${n.ssid || '(Hidden Network)'}</div></td>
+      <td>
+        <div class="nearby-ssid">${n.ssid || '(Hidden Network)'}</div>
+        ${n.vendor ? `<div style="font-size:9.5px; color:var(--muted); font-family:var(--mono); margin-top:2px;">${n.vendor} AP</div>` : ''}
+      </td>
       <td class="mono">${n.signal !== null ? n.signal + '%' : '—'}</td>
       <td class="mono" style="font-size:11px;">${dist}</td>
       <td class="mono ${open ? 'sec-open' : ''}">${securityLabel(n.security)}</td>
@@ -96,6 +99,7 @@ function renderLive(list){
     `;
     rows.appendChild(tr);
   });
+
 }
 
 async function scanLive(){

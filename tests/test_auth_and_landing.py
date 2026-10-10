@@ -12,9 +12,9 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import auth_db
-import db
-import app as flask_app
+import auth_db  # noqa: E402
+import db  # noqa: E402
+import app as flask_app  # noqa: E402
 
 
 class TestAuthDB(unittest.TestCase):
@@ -416,5 +416,3 @@ class TestFlaskRoutesAndLanding(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
